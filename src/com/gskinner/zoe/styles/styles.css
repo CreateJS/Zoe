@@ -1,0 +1,354 @@
+/* CSS file */
+@namespace s "library://ns.adobe.com/flex/spark";
+@namespace mx "library://ns.adobe.com/flex/halo";
+@namespace controls "com.gskinner.controls.*";
+
+/****************************************************
+*  TEXT
+****************************************************/
+.header1 {
+	fontFamily: contentFont;
+	fontSize: 14;
+	fontWeight: "bold";
+	paddingRight: 5;
+}
+
+.contentText {
+	fontFamily: contentFont;
+	fontSize: 14;
+	lineHeight: 18;
+	color: #555555;
+}
+
+.formText {
+	fontFamily: contentFont;
+	fontSize: 12;
+	color: #555555;
+}
+
+.formTextError {
+	fontFamily: contentFont;
+	fontSize: 12;
+	color: #d50303;
+}
+
+.errorText {
+	fontSize: 12;
+	fontWeight: "bold";
+	color: #d50303;
+}
+
+.successText {
+	fontSize: 12;
+	fontWeight: "bold";
+	color: #175903;
+}
+
+.appTitleLarge {
+	fontFamily: contentFont;
+	fontSize: 24;
+	fontWeight: "bold";
+	color: #000000;
+}
+
+.appTitleSmall {
+	fontFamily: contentFont;
+	fontSize: 11;
+	fontWeight: "bold";
+	color: #7f7f7f;
+}
+
+.headerTextSmall {
+	fontFamily: contentFont;
+	fontSize: 13;
+	fontWeight: "bold";
+	color: #000000;
+}
+
+#statusText {
+	fontWeight: "bold";
+	lineHeight: 16;
+}
+
+.bottomMenu {
+	fontFamily: contentFont;
+	fontSize: 16;
+	fontWeight: bold;
+	color: #DDDDDD;
+}
+
+.versionCheck {
+	fontFamily: contentFont;
+	fontWeight: "bold";
+	color: #444444;
+	fontSize: 11;
+}
+
+.versionCheckError {
+	fontFamily: contentFont;
+	fontWeight: "bold";
+	color: #DD0000;
+	fontSize: 11;
+}
+
+.versionCheckCorrect {
+	fontFamily: contentFont;
+	fontWeight: "bold";
+	color: #175903;
+	fontSize: 11;
+	textAlign: "center"
+}
+
+/****************************************************
+*  Class Selectors
+****************************************************/
+s|WindowedApplication {
+	backgroundColor: #333333;
+	backgroundAlpha: 1;
+	resizeAffordanceWidth: 6;
+	backgroundImage: Embed(source="assets/TileMainBG.png");
+	left:10px;	
+}
+
+s|VScrollBar {
+	skinClass: ClassReference("com.gskinner.skins.VScrollBarSkin");
+}
+
+s|NumericStepper {
+	fontSize:11;
+}
+
+s|TextArea {
+	borderVisible: false;
+	contentBackgroundColor: "0xDDDDDD";
+	contentBackgroundAlpha: .6;
+}
+
+s|TextInput {
+	borderVisible: false;
+	contentBackgroundColor: "0xDDDDDD";
+	contentBackgroundAlpha: .6;
+}
+
+mx|ToolTip {
+	backgroundAlpha: 1.0;
+	backgroundColor: #b4d1f1;
+	color: black;
+	cornerRadius: 8;
+	fontSize: 12;
+}
+
+s|TextArea s|VScrollBar {
+	skinClass: ClassReference("com.gskinner.skins.VScrollBarSkin");
+}
+
+s|List {
+	contentBackgroundColor: "0xDDDDDD";
+	contentBackgroundAlpha: 1;
+}
+
+s|Button {
+	skinClass: ClassReference("com.gskinner.skins.IconButtonSkin");
+}
+
+s|ButtonBar {
+	skinClass: ClassReference("com.gskinner.zoe.skins.BottomMenuButtonBarSkin");
+}
+
+s|ToggleButton {
+	iconUp: Embed("assets/TransparencyBtn_up.png");
+}
+
+/****************************************************
+*  Style Names / ID's
+****************************************************/
+.textButton {
+	paddingLeft: 10;
+	paddingRight: 6;
+}
+
+.addFileButton {
+	skinClass: ClassReference("com.gskinner.skins.ImageButtonSkin");
+	iconUp: Embed("assets/FileIconAdd.png");
+	/*iconOver: "assets/images/FileIcon.png";
+	iconDown: "assets/images/FileIcon.png";*/
+}
+
+.folderButton {
+	skinClass: ClassReference("com.gskinner.skins.ImageButtonSkin");
+	iconUp: Embed("assets/FolderIcon.png");
+}
+
+.helpButton {
+	skinClass: ClassReference("com.gskinner.skins.ImageButtonSkin");
+	paddingLeft: -2;
+	paddingTop:1;
+	iconUp: Embed("assets/HelpIcon.png");
+}
+
+.deleteButton {
+	skinClass: ClassReference("com.gskinner.skins.ImageButtonSkin");
+	iconUp: Embed("assets/DeleteConfigButton.png");
+}
+
+.refreshButton {
+	skinClass: ClassReference("com.gskinner.skins.ImageButtonSkin");
+	iconUp: Embed("assets/Refresh.png");
+}
+
+.exportButton {
+	skinClass: ClassReference("com.gskinner.skins.IconButtonSkin");
+	iconUp: Embed("assets/RunArrow.png");
+	paddingRight: 4;
+	paddingTop: 4;
+	iconPaddingTop: -1;
+}
+
+.bgColorPicker {
+	textInputClass: ClassReference("com.gskinner.zoe.controls.ColorPreviewText");
+}
+
+.transparentSkin {
+	skinClass: ClassReference("com.gskinner.zoe.skins.TransparencyButton");
+}
+
+.simpleButton {
+	paddingTop: 4;
+	skinClass: ClassReference("com.gskinner.skins.IconButtonSkin");
+}
+
+/*******************************************************************************
+*  Embed Fonts through CSS
+********************************************************************************/
+
+/* SPARK */
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: arialEmbed;
+	fontStyle: normal;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+	cff: true; /* Set to true for use with Fx4 (Spark), false for Fx3 (Halo)*/
+	
+	unicodeRange:
+		U+0041-U+005A, /* Upper-Case [A..Z] */
+		U+0061-U+007A, /* Lower-Case a-z */
+		U+0030-U+0039, /* Numbers [0..9] */
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E; /* Punctuation */
+}
+
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: normal;
+	fontWeight: bold;
+	advancedAntiAliasing: true;
+	cff: true;
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: italic;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+	cff: true;
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: italic;
+	fontWeight: bold;
+	advancedAntiAliasing: true;
+	cff: true;
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+/* HALO */
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: normal;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+	cff: false; 
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: normal;
+	fontWeight: bold;
+	advancedAntiAliasing: true;
+	cff: false;
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: italic;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+	cff: false;
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+@font-face {
+	src: url("/assets/fonts/HelveticaLTStd-Light.otf");
+	fontFamily: contentFont;
+	fontStyle: italic;
+	fontWeight: bold;
+	advancedAntiAliasing: true;
+	cff: false;
+	
+	unicodeRange:
+		U+0041-U+005A,
+		U+0061-U+007A, 
+		U+0030-U+0039,
+		U+00CB, /* ë */
+		U+0020-U+002F,U+003A-U+0040,U+005B-U+0060,U+007B-U+007E;
+}
+
+

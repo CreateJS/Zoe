@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<configuration xmlns="http://ns.adobe.com/air/framework/update/configuration/1.0"> 
+     <url>http://www.gskinner.com/apps/zoe/version.xml</url> 
+    <delay>1</delay> 
+</configuration>
