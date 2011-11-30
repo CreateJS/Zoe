@@ -93,10 +93,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 						   width="{hostComponent.getStyle('iconWidth')}"
 						   height="{hostComponent.getStyle('iconHeight')}">
 			</s:BitmapImage>
-			<s:filters>
-				<s:DropShadowFilter blurX="4" blurY="4" distance="3" angle="45" alpha=".3" color="0x000000" includeIn="over,down"/>
-				<s:DropShadowFilter inner="true" blurX="3" blurY="3" distance="5" angle="45" alpha=".05" color="0x000000" includeIn="down"/>
-			</s:filters>
+			<!-- <s:filters>
+					<s:DropShadowFilter blurX="4" blurY="4" distance="3" angle="45" alpha=".3" color="0x000000" includeIn="over,down"/>
+					<s:DropShadowFilter inner="true" blurX="3" blurY="3" distance="5" angle="45" alpha=".05" color="0x000000" includeIn="down"/>
+			</s:filters> -->
 		</s:Group>
 	</s:Group>
 </s:SparkSkin>

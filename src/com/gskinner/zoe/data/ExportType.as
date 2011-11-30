@@ -1,6 +1,5 @@
 /*
 * Zoë by gskinner.com.
-* Visit www.gskinner.com/blog for documentation, updates and more free code.
 *
 * Copyright (c) 2010 Grant Skinner
 * 
@@ -28,55 +27,37 @@
 
 package com.gskinner.zoe.data {
 	
-	/**
-	 * Defines a individual animation state, as created by CaptureSWF.
-	 * 
-	 * @see com.gskinner.animationcapture.getStates
-	 * 
-	 */
-	public class AnimationState {
+	public class ExportType {
 		
 		/**
-		 * Name of the state, as defined in the source swf file.
+		 * Constants used for Export formats.
 		 * 
 		 */
-		public var name:String;
 		
 		/**
-		 * Any frames attached to this state.
+		 * When set Zoe will export individual PNG files.
 		 * 
 		 */
-		public var frames:Object;
+		public static const FORMAT_FRAME:String = 'formatFrame';
 		
 		/**
-		 * The start of this state.
+		 * When set Zoe will export a single PNG sprite sheet.
 		 * 
 		 */
-		public var startFrame:uint;
+		public static const FORMAT_WEB:String = 'formatWeb';
 		
 		/**
-		 * End frame for this animation.
-		 * This value is auto-generated based on:
-		 * a) The start of a new sequence
-		 * or
-		 * b) An empty keyframe
+		 * When set Zoe will export no data.
 		 * 
 		 */
-		public var endFrame:uint;
+		public static const EXPORT_NONE:String = 'exportNone';
 		
 		/**
-		 * Creates a new AnimtaionState instance.
-		 * 
-		 * @param name The name of this state, defined on the timeline by the loaded swf.
-		 * @param startFrame The 0 based start frame of this state.
-		 * @param endFrame The 0 based end frame of this state.
+		 * When set Zoe will export JSON stub code for Easel.
+		 * @see http://www.easeljs.com
 		 * 
 		 */
-		public function AnimationState(name:String, startFrame:uint, endFrame:uint, frames:Object=null) {
-			this.name = name;
-			this.startFrame = startFrame;
-			this.endFrame = endFrame;
-			this.frames = frames;
-		}
+		public static const EXPORT_JSON:String  = 'exportJson';
+		
 	}
 }

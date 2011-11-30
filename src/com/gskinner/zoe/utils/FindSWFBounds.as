@@ -154,12 +154,12 @@ package com.gskinner.zoe.utils {
 		 */
 		protected function handleFindBounds(event:Event):void {
 			findBoundsBmpd.draw(swf, null, findBoundsColorTransform);
-			
 			if (_frameCount == ++count) {
 				stage.frameRate = startFrameRate;
 				swf.removeEventListener(Event.ENTER_FRAME, handleFindBounds);
 				
 				_bounds = findBoundsBmpd.getColorBoundsRect(0xFFFFFF, boundsColorTint, false);
+				
 				findBoundsBmpd.dispose();
 				
 				dispatchEvent(new Event(Event.COMPLETE));

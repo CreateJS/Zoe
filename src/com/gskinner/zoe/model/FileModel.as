@@ -27,14 +27,15 @@
 */
 package com.gskinner.zoe.model {
 	
-	import com.gskinner.zoe.data.SourceFileData;
-	import com.gskinner.zoe.views.CapturePreview;
 	import com.gskinner.filesystem.Preferences;
 	import com.gskinner.utils.CallLater;
+	import com.gskinner.zoe.data.SourceFileData;
+	import com.gskinner.zoe.views.CapturePreview;
 	
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.filesystem.File;
+	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	
 	import mx.collections.ArrayList;
@@ -103,6 +104,15 @@ package com.gskinner.zoe.model {
 		}
 		
 		/**
+		 * Sets the registration point for export.
+		 * 
+		 */
+		public function set registrationPt(value:Point):void {
+			selectedItem.registrationPt = value;
+			CallLater.call(saveState, 2);
+		}
+		
+		/**
 		 * Gets the dropDownLiat we want to update (the main top drop-down)
 		 * 
 		 */
@@ -119,7 +129,7 @@ package com.gskinner.zoe.model {
 				for (var i:uint=0;i<l;i++) {
 					var obj:Object = oldDp[i];
 					var fileData:SourceFileData = new SourceFileData();
-					fileData.deserialze(obj);
+					fileData.deserialize(obj);
 					arr.push(fileData);
 				}
 				
@@ -130,6 +140,7 @@ package com.gskinner.zoe.model {
 			
 			_target.dataProvider = _dp;
 			_target.selectedIndex = Preferences.getPref(INDEX_NAME);
+			
 			dispatchEvent(new Event(Event.CHANGE));
 		}
 		
@@ -155,6 +166,16 @@ package com.gskinner.zoe.model {
 		}
 		
 		/**
+		 * Sets the threshold level for comparsion.
+		 * 
+		 */
+		
+		public function setSelectedThreshold(value:Number):void {
+			selectedItem.threshold = value;
+			CallLater.call(saveState, 2);
+		}
+		
+		/**
 		 * Sets the current items background color.
 		 * 
 		 */
@@ -162,6 +183,15 @@ package com.gskinner.zoe.model {
 			selectedItem.showGrid = showGrid;
 			selectedItem.backgroundColor = color;
 			
+			CallLater.call(saveState, 2);
+		}
+		
+		/**
+		 * Sets the selected reuse frame option.
+		 * 
+		 */
+		public function setSelectedReuseFrames(value:Boolean):void {
+			selectedItem.reuseFrames = value;
 			CallLater.call(saveState, 2);
 		}
 		
@@ -220,7 +250,8 @@ package com.gskinner.zoe.model {
 			var arr:Array = [];
 			var l:uint = _dp.source.length;
 			for (var i:uint=0;i<l;i++) {
-				arr.push((_dp.source[i] as SourceFileData).serialze());
+				
+				arr.push((_dp.source[i] as SourceFileData).serialize());
 			}
 			
 			Preferences.setPref(FILES_NAME, arr, false, true);

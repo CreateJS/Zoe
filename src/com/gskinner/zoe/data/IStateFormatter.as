@@ -32,9 +32,8 @@ package com.gskinner.zoe.data {
 	import flash.geom.Point;
 	
 	/**
-	 * Zoe supports 2 different export formats JSON and Easel stub code.
+	 * Zoe currently supports JSON export, for EaselJS support.
 	 * Here we define the interface for those formatters.
-	 * @see EaselFormatter
 	 * @see JSONFormatter
 	 * 
 	 */
@@ -48,8 +47,9 @@ package com.gskinner.zoe.data {
 		 * @param height The height of each frame.
 		 * @param registrationPoint The registrationPoint, as defined in the loaded swf.
 		 * @param fileName The base file to use for export.
+		 * @param frameCount The number frame use for export.
 		 * 
 		 */
-		function format(states:Vector.<AnimationState>, width:Number, height:Number, registrationPoint:Point, fileName:String):String;
+		function format(states:Vector.<AnimationState>, width:Number, height:Number, registrationPoint:Point, fileName:String, frameCount:Number, sheetData:Vector.<Object>=null, complex:Boolean=false):String;
 	}
 }

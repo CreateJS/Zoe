@@ -84,7 +84,7 @@ Displays a progress bar to the user while the application finds the loaded anima
 				
 				var app:Application = FlexGlobals.topLevelApplication as Application;
 				PopUpManager.addPopUp(_instance, app, true);
-				_instance.x = app.width-350;
+				_instance.x = 20;
 				_instance.y = app.height-40;
 			}
 			

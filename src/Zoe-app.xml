@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<application xmlns="http://ns.adobe.com/air/application/2.7">
+<application xmlns="http://ns.adobe.com/air/application/3.0">
 	<id>Zoe</id>
 	<filename>Zoe</filename>
 	<name>Zoë</name>
-	<versionNumber>1.0.6</versionNumber>
+	<versionNumber>1.5.0</versionNumber>
 	
 	<initialWindow>
 		<content>[This value will be overwritten by Flash Builder in the output app.xml]</content>
-		<minSize>820 430</minSize>
+		<minSize>675 430</minSize>
 		<autoOrients>false</autoOrients>
 	    <fullScreen>false</fullScreen>
-	    <visible>false</visible>
+	    <visible>true</visible>
   </initialWindow>
 	<icon>
 		<image16x16>icons/16x16.png</image16x16>

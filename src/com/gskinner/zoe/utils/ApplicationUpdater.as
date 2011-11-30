@@ -26,7 +26,6 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
 package com.gskinner.zoe.utils {
 	
 	import air.update.ApplicationUpdaterUI;

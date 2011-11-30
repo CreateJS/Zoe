@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 		 xmlns:fx="http://ns.adobe.com/mxml/2009"
 		 xmlns:s="library://ns.adobe.com/flex/spark" title="Export"
 		 xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:controls="com.gskinner.controls.*"
-		 initialize="init()" skinClass="com.gskinner.skins.UpdateDialogSkin" xmlns:ui="com.gskinner.ui.*"
+		 skinClass="com.gskinner.skins.UpdateDialogSkin" xmlns:ui="com.gskinner.ui.*"
 		 >
 	
 	<fx:Script>
@@ -45,11 +45,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			import com.gskinner.zoe.data.SourceFileData;
 			import com.gskinner.zoe.model.FileModel;
 			
-			import flash.utils.unescapeMultiByte;
-			
 			import mx.core.FlexGlobals;
 			import mx.managers.PopUpManager;
-			import flash.filesystem.File;
 			
 			/**
 			 * @private
@@ -62,14 +59,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected var model:FileModel;
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function init():void {
-				
-			}
 			
 			/**
 			 * Displays this dialog to the user.
@@ -102,10 +91,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				if (selItem.exportSheet) {
 					results.push('Sprite sheet exported as: ' + name + '.png');
-				}
-				
-				if (selItem.exportEasel) {
-					results.push('EaselJS stub code exported as: ' + name + '.js');
 				}
 				
 				if (selItem.exportFrames) {

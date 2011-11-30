@@ -27,6 +27,7 @@
 
 package com.gskinner.zoe.data {
 	
+	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.utils.escapeMultiByte;
 	import flash.utils.unescapeMultiByte;
@@ -79,14 +80,51 @@ package com.gskinner.zoe.data {
 		public var sourcePath:String;
 		
 		/**
+		 * Dimensions in which sprite sheet is exported.
+		 */
+		public var _formatExportType:String;
+		
+		/**
+		 * Format type to export.
+		 */
+		public var _exportType:String;
+		
+		/**
 		 * Specifies whether Easel stub code should be exported or not. 
 		 */
-		public var exportEasel:Boolean;
+		public function set exportJSON(value:Boolean):void {
+			_exportJSON = value;
+		}
+		public function get exportJSON():Boolean { return _exportJSON; }
+		
+		public function get exportType():String { return _exportType; }
+		public function set exportType(value:String):void {
+			_exportType = value;
+			if (_exportType == ExportType.EXPORT_NONE) {
+				exportJSON = false;
+			} else if (_exportType == ExportType.EXPORT_JSON) {
+				exportJSON = true;
+			}
+		}
+		
+		/**
+		 * Sets the image format to be exported. (A full SpriteSheet, or individual frames)
+		 * 
+		 */
+		public function get formatExportType():String { return _formatExportType; }
+		public function set formatExportType(value:String):void {
+			_formatExportType = value;
+			if (_formatExportType == ExportType.FORMAT_FRAME) {
+				exportFrames = true;
+			} else if (_formatExportType == ExportType.FORMAT_WEB) {
+				exportFrames = false;
+			}
+		}
 		
 		/**
 		 * Specifies whether there JSON source should be exported or not.
 		 */
-		public var exportJSON:Boolean;
+		protected var _exportJSON:Boolean = true;
 		
 		/**
 		 * Specifies whether or not to export the spritesheet, defaults to true.
@@ -99,6 +137,16 @@ package com.gskinner.zoe.data {
 		public var exportFrames:Boolean;
 		
 		/**
+		 * Specifies threshold level for comparing Bitmapdata.
+		 */
+		public var threshold:Number;
+		
+		/**
+		 * Specifies reuse frames.
+		 */
+		public var reuseFrames:Boolean;
+		
+		/**
 		 * @private
 		 */
 		protected var _name:String;
@@ -107,6 +155,26 @@ package com.gskinner.zoe.data {
 		 * @private
 		 */
 		protected var _destinationPath:String;
+		
+		/**
+		 * @private
+		 */
+		public var registrationPt:Point;
+		
+		/**
+		 * @private
+		 */
+		public var displayPt:Point;
+		
+		/**
+		 * @private
+		 */
+		public var variableFrameDimensions:Boolean;
+		
+		/**
+		 * @private
+		 */
+		public var isDirty:Boolean = true;
 		
 		/**
 		 * Creates a new SourceFileData instance
@@ -146,7 +214,8 @@ package com.gskinner.zoe.data {
 		 * Convert to an generic object, so we can save as AMF to the file system.
 		 * 
 		 */
-		public function serialze():Object {
+		public function serialize():Object {
+			
 			var obj:Object = {
 				bitmapWidth:bitmapWidth,
 				bitmapHeight:bitmapHeight,
@@ -157,12 +226,21 @@ package com.gskinner.zoe.data {
 				destinationPath:destinationPath,
 				sourcePath:sourcePath,
 				name:name,
-				exportEasel:exportEasel,
 				exportJSON:exportJSON,
 				exportSheet:exportSheet,
 				exportFrames:exportFrames,
-				frameCount:frameCount
+				threshold:threshold,
+				
+				reuseFrames:reuseFrames,
+				registrationPt:registrationPt,
+				variableFrameDimensions:variableFrameDimensions,
+				displayPt:displayPt,
+				frameCount:frameCount,
+				formatExportType:formatExportType,
+				exportType:exportType,
+				isDirty:isDirty
 			}
+			
 			return obj;
 		}
 		
@@ -170,7 +248,7 @@ package com.gskinner.zoe.data {
 		 * Converts our saved data into valid properties.
 		 * 
 		 */
-		public function deserialze(value:Object):void {
+		public function deserialize(value:Object):void {
 			bitmapWidth = value.bitmapWidth;
 			bitmapHeight = value.bitmapHeight;
 			backgroundColor = value.backgroundColor;
@@ -180,11 +258,18 @@ package com.gskinner.zoe.data {
 			destinationPath = value.destinationPath;
 			sourcePath = value.sourcePath;
 			name = value.name;
-			exportEasel = value.exportEasel;
+			displayPt = (value.displayPt!= null) ? new Point(value.displayPt.x, value.displayPt.y) : new Point(0, 0);
+			variableFrameDimensions = value.variableFrameDimensions;
 			exportJSON = value.exportJSON;
 			exportSheet = value.exportSheet;
 			exportFrames = value.exportFrames;
-			frameCount = isNaN(value.frameCount)?0:value.frameCount;
+			reuseFrames = value.reuseFrames;
+			registrationPt = (value.registrationPt != null) ? new Point(value.registrationPt.x, value.registrationPt.y) : new Point(0, 0);
+			threshold = isNaN(value.threshold) ? 0 : value.threshold;
+			frameCount = isNaN(value.frameCount)? 0: value.frameCount;
+			formatExportType = value.formatExportType;
+			exportType = value.exportType;
+			isDirty = value.isDirty;
 		}
 	}
 }

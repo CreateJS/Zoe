@@ -29,11 +29,11 @@
 /**
  * Formats captured data as JSON.
  * 
- * We don't use the JSON lib, so we can add custom formating to the exported data.
  */
 package com.gskinner.zoe.data {
 	
 	import com.maccherone.json.JSON;
+	
 	import flash.geom.Point;
 	
 	/**
@@ -50,28 +50,44 @@ package com.gskinner.zoe.data {
 		 * @inheritDoc
 		 * 
 		 */
-		public function format(values:Vector.<AnimationState>, width:Number, height:Number, registrationPoint:Point, fileName:String):String {
+		public function format(values:Vector.<AnimationState>, width:Number, height:Number, registrationPoint:Point, fileName:String, frameCount:Number, sheetData:Vector.<Object> = null, complex:Boolean=false):String {
 			var data:Object = {};
-			
-			data.src = fileName;
-			data.w = width;
-			data..h = height;
-			
-			if (registrationPoint) {
-				data.registrationPoint = [registrationPoint.x, registrationPoint.y];
+			data.images = [fileName];
+			if (sheetData.length>1) {
+				data.frames = [];
+				var len:uint = sheetData.length;
+				for(var k:uint=0;k<len;k++) {
+					var sheetItem:Object = sheetData[k];
+					data.frames[k] = new Array(sheetItem.x, sheetItem.y, sheetItem.w, sheetItem.h, sheetItem.imageIndex, sheetItem.ox, sheetItem.oy);
+				}
+			} else {
+				data.frames = {width:width, 
+							   height:height, 
+				               regX:(registrationPoint) ? registrationPoint.x: 0, 
+				               regY:(registrationPoint) ? registrationPoint.y: 0, 
+					   	       count:frameCount };
 			}
 			
-			//Encode states
-			var states:Object = {};
-			data.states = states;
 			var l:uint = values.length;
-			
-			for (var i:uint=0;i<l;i++) {
-				var state:AnimationState = values[i];
-				states[state.name] = {start: state.startFrame, end: state.endFrame};
+			var animations:Object = {}
+			if (l > 0) {
+				data.animations = animations;
 			}
 			
-			return JSON.encode(data, true);
+			for(var i:uint=0;i<l;i++) {
+				var state:AnimationState = values[i];
+				if (complex) {
+					if (state.frames.storedFrames != null) {
+						if (state.frames.storedFrames.length > 0) { 
+							delete state.frames.storedFrames;
+						} 
+					}
+					animations[state.name] = state.frames;
+				} else {
+					animations[state.name] = new Array(state.startFrame, state.endFrame);
+				}
+			}
+			return com.maccherone.json.JSON.encode(data, true, 160);
 		}
 	}
 }

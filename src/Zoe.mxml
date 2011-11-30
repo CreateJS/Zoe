@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 -->
 <s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" showStatusBar="false"
-					   xmlns:s="library://ns.adobe.com/flex/spark" width="750" height="500" applicationComplete="init()"
+					   xmlns:s="library://ns.adobe.com/flex/spark" width="675" height="500" applicationComplete="init()"
 					   xmlns:mx="library://ns.adobe.com/flex/mx" skinClass="com.gskinner.skins.ApplicationSkin"
 					   xmlns:views="com.gskinner.zoe.views.*"
 					   nativeDragOver="handleDragOver(event)" nativeDragDrop="handleDragDrop(event)"
@@ -144,6 +144,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 	
 	<s:SkinnableContainer width="100%" height="100%" backgroundColor="0xffffff">
 		<views:Main id="swfCapture" width="100%" height="100%" paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10" />
+		<!-- <s:Scroller width="100" height="250">
+			<s:VGroup id="test" width="100%" height="250"/>
+		</s:Scroller> -->
+		
 	</s:SkinnableContainer>
 	
 </s:WindowedApplication>

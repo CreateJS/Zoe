@@ -27,39 +27,25 @@
 */
 package com.gskinner.zoe.data {
 	
+	import flash.display.BitmapData;
 	import flash.geom.Point;
+	import flash.geom.Rectangle;
 	
-	/**
-	 * Formats the captured animation sequence as Easel stub code.
-	 * 
-	 */
-	public class EaselFormatter implements IStateFormatter {
+	public class FrameData {
 		
-		public function EaselFormatter() {
-			
+		public var currentLabel:String;
+		public var ref:BitmapData;
+		public var rect:Rectangle;
+		public var point:Point;
+		public var index:uint;
+		
+		public var count:uint = 1;
+		
+		public function FrameData(bmpd:BitmapData, index:uint, label:String) {
+			this.ref = bmpd;
+			this.index = index;
+			this.currentLabel = label;
 		}
 		
-		/**
-		 * @inheritDoc
-		 * 
-		 */
-		public function format(states:Vector.<AnimationState>, width:Number, height:Number, registrationPoint:Point, fileName:String):String {
-			var output:Array = [];
-			
-			var l:uint = states.length;
-			for (var i:uint=0;i<l;i++) {
-				var s:AnimationState = states[i];
-				output.push(s.name+':['+s.startFrame + ',' +s.endFrame + ']');
-			}
-			
-			var regPoint:String = '';
-			
-			if (registrationPoint) {
-				regPoint = '// regX='+registrationPoint.x + ', regY='+registrationPoint.y;
-			}
-			
-			var statesStr:String = '{\n\t' + output.join(',\n\t') + '\n\t};';
-			return 'var frameData = '+statesStr+'\nvar img = new Image()\nimg.src = "'+fileName+'"\nvar spriteSheet = new SpriteSheet(img,' + width + ',' + height + ',frameData);\n'+regPoint;
-		}
 	}
 }

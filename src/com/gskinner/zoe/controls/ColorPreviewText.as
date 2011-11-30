@@ -28,8 +28,6 @@
 
 package com.gskinner.zoe.controls {
 	
-	import com.gskinner.zoe.skins.TransparencyButton;
-	
 	import flash.events.Event;
 	
 	import mx.controls.listClasses.BaseListData;
@@ -60,6 +58,10 @@ package com.gskinner.zoe.controls {
 		 */
 		public var toggleTransparencyButton:ToggleButton;
 		
+		/**
+		 * @private
+		 * 
+		 */
 		protected static var _instance:ColorPreviewText;
 		
 		/**

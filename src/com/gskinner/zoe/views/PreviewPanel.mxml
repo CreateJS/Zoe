@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Zoë by gskinner.com.
+Visit www.gskinner.com/blog for documentation, updates and more free code.
+
+Copyright (c) 2010 Grant Skinner
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+-->
+
+<!---
+
+The view used to display the loaded swf, and its capture bounds.
+
+-->
+<s:SkinnableContainer xmlns:fx="http://ns.adobe.com/mxml/2009" backgroundColor="0xCCCCCC"
+					  xmlns:s="library://ns.adobe.com/flex/spark" creationComplete="init()"
+					  xmlns:mx="library://ns.adobe.com/flex/mx"
+					  resize="handleResize()" width="450" height="30" backgroundAlpha="0.75" >
+	
+	<fx:Script>
+		<![CDATA[
+			import com.gskinner.zoe.events.PreviewPanelEvent;
+			import com.gskinner.zoe.skins.PlayPauseButton;
+			
+			[Embed (source="../../../../assets/ColorPickerAlpha.png")]
+			protected const colorPickerAlpha:Class;
+			
+			[Embed (source="../../../../assets/ColorPicker.png")]
+			protected const colorPickerNormal:Class;
+			
+			public var _selectedColor:int;
+			public var totalFrames:Number=0;
+			public var frameRate:Number=0;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function init():void {
+				selectedColor = bgColor.selectedColor;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function get selectedColor():int { return _selectedColor; }
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function set selectedColor(value:int):void {
+				_selectedColor = value;
+				bgColor.selectedColor = _selectedColor;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function updateColorPickerSkin(showGrid:Boolean):void {
+				if (showGrid) {
+					this.bgColor.setStyle('upSkin', colorPickerAlpha);
+					this.bgColor.setStyle('overSkin', colorPickerAlpha);
+					this.bgColor.setStyle('downSkin', colorPickerAlpha);
+				}else {
+					this.bgColor.setStyle('upSkin', colorPickerNormal);
+					this.bgColor.setStyle('overSkin', colorPickerNormal);
+					this.bgColor.setStyle('downSkin', colorPickerNormal);
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleResize():void {
+				
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function togglePlayClick():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.PLAY_CLICKED));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleBackgroundColorOpen():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.COLOR_OPEN));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleBgColorChange():void {
+				selectedColor = bgColor.selectedColor;
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.COLOR_CHANGED));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleColorPickerMove():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.COLOR_MOVE));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleFrameRateChange():void {
+				frameRate = frameRateStep.value;
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.FRAME_RATE_CHANGED));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleFreqRateChange():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.FREQUENCY_RATE_CHANGED));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updatePreviewFramePosition():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.UPDATE_FRAME_POSITION));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSliderEndChange():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.CHANGE_END_FRAME_POSITION));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSliderStartChange():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.CHANGE_START_FRAME_POSITION));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updateSliderPosition():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.UPDATE_SLIDER_POSITION));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleStateChange():void {
+				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.CHANGE_STATE));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function formatStateLabel(value:Object):String {
+				return value == null?'':value.name;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function formatFrameSliderLabel(value:String):String {
+				return 'frame ' + value + ' of ' + String(totalFrames);
+			}
+			
+		]]>
+	</fx:Script>
+	<s:HGroup width="100%" paddingTop="5" paddingLeft="5" paddingRight="5">
+			<s:ToggleButton width="24" height="24" id="playPauseBtn" skinClass="com.gskinner.zoe.skins.PlayPauseButton" click="togglePlayClick()" />
+			<s:Label text="fps" paddingTop="5"/>
+			<s:NumericStepper id="frameRateStep" minimum="1" maximum="60" width="40" value="24" change="handleFrameRateChange()" />
+			<s:VGroup paddingTop="5" width="100%">
+				<s:HSlider  id="frameSlider" snapInterval="1" width="100%" dataTipFormatFunction="formatFrameSliderLabel" 
+							change="updatePreviewFramePosition()" 
+							changeEnd="handleSliderEndChange()" 
+							changeStart="handleSliderStartChange()" />
+			</s:VGroup>
+			<s:TextInput id="frameNumDisplay" restrict="[0-9]" width="35" 
+						 focusIn="handleSliderStartChange()" 
+						 focusOut="handleSliderEndChange()" 
+						 enter="updateSliderPosition()" />
+			<s:DropDownList id="stateList" width="150" labelFunction="formatStateLabel" change="handleStateChange()"  />
+			<s:Button id="statesListHelpBtn" styleName="helpButton" useHandCursor="true" buttonMode="true" />
+			<mx:ColorPicker id="bgColor" styleName="bgColorPicker" open="handleBackgroundColorOpen()" change="handleBgColorChange()" 
+							mouseOver="handleColorPickerMove()" itemRollOver="handleColorPickerMove()"  />
+	</s:HGroup>
+	
+</s:SkinnableContainer>

@@ -40,13 +40,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 	
 	<fx:Script>
 		<![CDATA[
+			import com.gskinner.zoe.controls.ToolTip;
 			import com.gskinner.zoe.events.CaptureEvent;
 			import com.gskinner.zoe.model.FileModel;
-			
-			import flash.desktop.NativeApplication;
-			import flash.filesystem.File;
-			import flash.filesystem.FileMode;
-			import flash.filesystem.FileStream;
+			import com.gskinner.zoe.utils.DottedLine;
 			
 			import mx.controls.Alert;
 			import mx.core.FlexBitmap;
@@ -153,6 +150,56 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
+			public var dl:DottedLine;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var padding:Number = 0;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var regPtClipContainer:UIComponent;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var registrationOver:Boolean = false;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var dlContainer:UIComponent;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var s:Shape;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var tt:ToolTip;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var isDown:Boolean = false;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public var showBoundBox:Boolean = true;
+			
 			protected function init():void {
 				alphaGridBitmap = (new alphaGrid() as FlexBitmap).bitmapData;
 				
@@ -160,8 +207,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				resizeStartPoint = new Point();
 				
 				maskContainer = new Sprite();
+				
 				var cont:UIComponent = new UIComponent();
 				cont.addChild(maskContainer);
+				
 				var g:Graphics = maskContainer.graphics;
 				g.clear();
 				
@@ -171,6 +220,35 @@ OTHER DEALINGS IN THE SOFTWARE.
 				this.addElement(cont);
 				
 				this.mask = cont;
+				
+				dl = new DottedLine();
+				
+				dlContainer = new UIComponent();
+				dlContainer.mouseChildren = false;
+				dlContainer.mouseEnabled = false;
+				dlContainer.addChild(dl);
+				
+				addElement(dlContainer);
+				
+				regPtClipContainer = new UIComponent();
+				addElement(regPtClipContainer);
+				
+				s = new Shape();
+				
+				regPtClipContainer.useHandCursor = true;
+				regPtClipContainer.buttonMode = true;
+				
+				regPtClipContainer.mouseChildren = false;
+				regPtClipContainer.doubleClickEnabled = true;
+				
+				regPtClipContainer.addEventListener(MouseEvent.DOUBLE_CLICK, handleDoubleClick, false, 0, true);
+				regPtClipContainer.addEventListener(MouseEvent.MOUSE_DOWN, handleRegPointDown, false, 0, true);
+				regPtClipContainer.addEventListener(MouseEvent.MOUSE_UP, handleRegPointUp, false, 0, true);
+				regPtClipContainer.addEventListener(MouseEvent.MOUSE_MOVE, handleRegPointMove, false, 0, true);
+				
+				tt = new ToolTip();
+				tt.hide();
+				addElement(tt);
 				
 				NativeApplication.nativeApplication.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, true);
 			}
@@ -285,12 +363,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 			}
 			
 			/**
-			 * UPdates the current capture baounds, and updates the view.
+			 * Updates the current capture baounds, and updates the view.
 			 * 
 			 */
 			public function set captureBounds(bounds:Rectangle):void {
 				_captureBounds = bounds.clone();
-				
 				updateView();
 			}
 			
@@ -315,6 +392,58 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
+			public function updatePadding():void {
+				this.setElementIndex(dlContainer, this.numElements - 1);
+				dlContainer.alpha = (padding < 1) ? 0:1; 
+				
+				if (_captureBounds) {
+					dl.update(_captureBounds, padding);
+					dl.x = _captureBounds.x;
+					dl.y = _captureBounds.y;
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function displayPadding(value:Boolean):void {
+				dlContainer.visible = !value;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function findMovieRegPoint():void {
+				var registrationPointClip:DisplayObject = content.getChildByName('registrationPoint');
+				if (registrationPointClip) {
+					var pt:Point = new Point(registrationPointClip.x, registrationPointClip.y);
+					regPtClipContainer.x = pt.x;
+					regPtClipContainer.y = pt.y;
+					this.updateRegPoint();
+				} else {
+					topAlignRegPoint();
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function topAlignRegPoint():void {
+				var rect:Rectangle = (dlContainer.visible) ? this.dlContainer.getBounds(this) : new Rectangle(_captureBounds.x-1, _captureBounds.y-1, _captureBounds.width, _captureBounds.height);
+				var pt:Point = new Point(rect.x, rect.y);
+				regPtClipContainer.x = pt.x;
+				regPtClipContainer.y = pt.y;
+				this.updateRegPoint();
+			}
+			
+			
+			/**
+			 * @private
+			 * 
+			 */
 			protected function handleLoadedSwfError(event:UncaughtErrorEvent):void {
 				event.preventDefault();
 			}
@@ -325,7 +454,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function handleResize():void {
 				updateView();
-				
 				dispatchEvent(new Event(Event.CHANGE));
 			}
 			
@@ -335,7 +463,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function updateView():void {
 				if (initialized ==  false) { return; }
-				
 				var g:Graphics = background.graphics;
 				g.clear();
 				
@@ -349,12 +476,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				if (_captureBounds != null) {
 					g.beginFill(0xffffff, .2);
-					g.lineStyle(1, 0x0, 1, true);
+					
+					g.lineStyle(1, 0x0, (showBoundBox) ? 1 : 0.1, true);
 					var displayBounds:Rectangle = _captureBounds.clone();
 					displayBounds.inflate(1, 1); //Inflate by 1 so animation is within the preview.
 					g.drawRect(displayBounds.x, displayBounds.y, displayBounds.width, displayBounds.height);
 				}
 				updateMask();
+				updatePadding();
 			}
 			
 			/**
@@ -413,7 +542,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				}
 				
 				updateView();
-				
 				dispatchEvent(new Event(Event.CHANGE));
 			}
 			
@@ -449,7 +577,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				}
 				
 				updateView();
-				
 				dispatchEvent(new Event(Event.CHANGE));
 			}
 			
@@ -501,7 +628,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (cursorInResizeBounds()) {
 					Mouse.cursor = MouseCursor.BUTTON;
 				} else if (cursorInCaptureBounds()) {
-					Mouse.cursor = MouseCursor.HAND;
+					
+						Mouse.cursor = MouseCursor.HAND;
+					
 				} else {
 					Mouse.cursor = MouseCursor.AUTO;
 				}
@@ -566,15 +695,121 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (content == null) { return; }
 				
 				var registrationPointClip:DisplayObject = content.getChildByName('registrationPoint');
-				
 				if (registrationPointClip) {
 					registrationPointClip.visible = false;
+					
 					_registrationPoint = new Point(registrationPointClip.x, registrationPointClip.y);
+					
 				} else {
-					_registrationPoint = null;
+					var p:Point = getLocalPoint();
+					_registrationPoint = p;
+				}
+				dispatchEvent(new CaptureEvent(CaptureEvent.SWF_INIT));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleRegPointDown(event:MouseEvent):void {
+				tt.show(); 
+				var clip:UIComponent = (event.currentTarget as UIComponent);
+				setElementIndex(clip, this.numElements - 1);
+				setElementIndex(tt, this.numElements - 1);
+				clip.startDrag();
+				isDown = true;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			
+			protected function handleDoubleClick(event:MouseEvent):void {
+				topAlignRegPoint();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleRegPointMove(event:MouseEvent):void {
+				Mouse.cursor = MouseCursor.BUTTON;
+				tt.labelField = 'Reg Point ' + getLocalPoint();
+				tt.x = mouseX + 5;
+				tt.y = mouseY + 25;
+				
+				checkBoundary();
+				
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function checkBoundary():void {
+				var rect:Rectangle = this.background.getRect(background);
+				if (mouseX + tt.actualWidth > rect.right) {
+					tt.x = rect.right - tt.actualWidth;
+				} else if (mouseX < rect.left) {
+					tt.x = rect.left + tt.actualWidth;
+				} 
+				if (mouseY + tt.actualHeight > (rect.bottom - (tt.actualHeight+5))) {
+					tt.y = rect.bottom - tt.actualHeight;
+				} else if (mouseY - tt.actualHeight < rect.top) {
+					tt.y = rect.top + tt.actualHeight;
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleRegPointUp(event:MouseEvent):void {
+				tt.hide();
+				var clip:UIComponent = (event.currentTarget as UIComponent);
+				clip.stopDrag();
+				updateRegPoint();
+				isDown = false;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function updateRegPoint():void {
+				var p:Point = getLocalPoint();
+				var displayPt:Point = new Point();
+				if (registrationPoint) {
+					_registrationPoint.x = p.x;
+					_registrationPoint.y = p.y;
+					
+					
+				}else {
+					_registrationPoint = new Point(p.x, p.y);
 				}
 				
-				dispatchEvent(new CaptureEvent(CaptureEvent.SWF_INIT));
+				displayPt.x = regPtClipContainer.x;
+				displayPt.y = regPtClipContainer.y;
+				
+				dispatchEvent(new CaptureEvent(CaptureEvent.REG_PT_CHANGE, false, false, null, {displayPt:displayPt, relativePt:registrationPoint}));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function getLocalPoint():Point {
+				var rect:Rectangle = (dlContainer.visible) ? this.dlContainer.getBounds(this) : new Rectangle(_captureBounds.x-1, _captureBounds.y-1, _captureBounds.width, _captureBounds.height);
+				
+				s.graphics.clear();
+				s.graphics.beginFill(0x0, 1);
+				s.graphics.drawRect(0, 0, rect.width, rect.height);
+				s.graphics.endFill();
+				s.x = rect.x;
+				s.y = rect.y;
+				
+				return s.globalToLocal(new Point(this.regPtClipContainer.x, this.regPtClipContainer.y));
 			}
 			
 			/**
@@ -585,10 +820,68 @@ OTHER DEALINGS IN THE SOFTWARE.
 				//Surpress
 			}
 			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function createRegisterPoint():void {
+				if (regPtClipContainer.numChildren == 0) {
+					regPtClipContainer.addChild(getSprite());
+				}
+				
+				var pt:Point;
+				
+				if (this.fileModel.selectedItem.displayPt) {
+					pt = this.fileModel.selectedItem.displayPt
+				} else if (_registrationPoint != null) {
+					pt = _registrationPoint;
+				} else {
+					pt = new Point(0, 0);
+				}
+				
+				regPtClipContainer.x = pt.x;
+				regPtClipContainer.y = pt.y; 
+				
+				updateRegPoint();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			public function setRegPt(pt:Point):void {
+				createRegisterPoint();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function getSprite():Sprite {
+				var s:Sprite = new Sprite();
+				var g:Graphics = s.graphics;
+				var radius:Number = 5;
+				
+				g.lineStyle(1, 0x000000, 0, true);
+				g.beginFill(0x000000, 0);
+				g.drawCircle(0, 0, radius*2);
+				g.beginFill(0xFFFFFF, 0);
+				g.drawCircle(0, 0, radius-1);
+				g.endFill();
+				
+				g.lineStyle(1, 0x000000, 1, true);
+				g.moveTo(-radius,0);
+				g.lineTo(radius, 0);
+				g.moveTo(0, radius);
+				g.lineTo(0, -radius);
+
+				return s;
+			}
+			
 		]]>
 	</fx:Script>
 	
 	<mx:Canvas id="background" width="100%" height="100%"  mouseMove="handleMouseMove()" mouseDown="handleMouseDown()" mouseUp="handleMosueUp()" />
 	<mx:SWFLoader id="swfLoader" securityError="handleError()" ioError="handleError()" mouseChildren="false" mouseEnabled="false" init="handleSwfLoad()" scaleContent="false" />
-		
+	
 </s:SkinnableContainer>
