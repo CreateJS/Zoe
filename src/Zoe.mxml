@@ -144,10 +144,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 	
 	<s:SkinnableContainer width="100%" height="100%" backgroundColor="0xffffff">
 		<views:Main id="swfCapture" width="100%" height="100%" paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10" />
-		<!-- <s:Scroller width="100" height="250">
-			<s:VGroup id="test" width="100%" height="250"/>
-		</s:Scroller> -->
-		
 	</s:SkinnableContainer>
 	
 </s:WindowedApplication>

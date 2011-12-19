@@ -31,9 +31,8 @@ package com.gskinner.zoe.utils {
 	
 	import com.adobe.images.PNGEncoder;
 	import com.gskinner.zoe.data.AnimationState;
+	import com.gskinner.zoe.data.ExportType;
 	import com.gskinner.zoe.data.FrameData;
-	import com.gskinner.zoe.data.IStateFormatter;
-	import com.gskinner.zoe.data.JSONFormatter;
 	import com.gskinner.zoe.events.CaptureEvent;
 	import com.gskinner.zoe.model.FileModel;
 	import com.maccherone.json.JSON;
@@ -93,7 +92,7 @@ package com.gskinner.zoe.utils {
 		 * @private
 		 * 
 		 */
-		protected var captureData:Array;
+		public var exportedImageNames:Array;
 		
 		/**
 		 * @private
@@ -195,13 +194,6 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected var _displayPoint:Point;
-		
-		
-		/**
-		 * @private
-		 * 
-		 */
-		protected var sheetData:Vector.<Object>;
 	
 		/**
 		 * Created a new CaptureSwf instance.
@@ -216,6 +208,9 @@ package com.gskinner.zoe.utils {
 			super();
 			
 			fileModel = model;
+			
+			findBoundsColorTransform = new ColorTransform();
+			findBoundsColorTransform.color = boundsColorTint;
 		}
 		
 		/**
@@ -250,7 +245,6 @@ package com.gskinner.zoe.utils {
 		 */
 		public function capture():void {
 			isComplex = false;
-			sheetData = new Vector.<Object>();
 			positions = null;
 			pointLookup = null;
 			
@@ -276,23 +270,29 @@ package com.gskinner.zoe.utils {
 			}
 		}
 		
+		public function createSizeBitmap(stage):void {
+			findBoundsBmpd = new BitmapData(stage.width, stage.height, true, 0xff000000);
+		}
+		
 		protected function captureVariableSizeFrames():void {
 			var bounds:Rectangle = swf.getBounds(swf);
 			
 			if (stage == null) { stage = swf.stage; }
 			
-			findBoundsBmpd = new BitmapData(stage.width, stage.height, true, 0xff000000);
-			findBoundsColorTransform = new ColorTransform();
-			findBoundsColorTransform.color = boundsColorTint;
-			
 			handleVariableCaptureFrames(null);
 			swf.addEventListener(Event.ENTER_FRAME, handleVariableCaptureFrames, false, 0, true);
 		}
 		
-		protected function handleVariableCaptureFrames(event:Event):void {
+		public function getCurrentFrameBounds():Rectangle {
 			findBoundsBmpd.draw(swf, null, findBoundsColorTransform);
-			
 			var frame:Rectangle = findBoundsBmpd.getColorBoundsRect(0xFFFFFF, boundsColorTint, false);
+			findBoundsBmpd.fillRect(findBoundsBmpd.rect, 0xFFFFFF);
+			return frame;
+		}
+		
+		protected function handleVariableCaptureFrames(event:Event):void {
+			var frame:Rectangle = getCurrentFrameBounds();
+			frame.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
 			captureBounds[currentCaptureFrame] = frame;
 
 			var row:Number = currentCaptureFrame / columnCount | 0;
@@ -305,21 +305,19 @@ package com.gskinner.zoe.utils {
 			mtx.translate(frameX-frame.x, frameY-frame.y);
 			
 			var rect:Rectangle = new Rectangle(frame.x, frame.y, frame.width, frame.height);
+
+			if (rect.width == 0) {
+				rect = new Rectangle(frame.x, frame.y, 1,1); 
+			}
 			
 			//Capture just one frame here, we peice it together at the end.
 			var mtx2:Matrix = new Matrix();
 			mtx2.translate(-rect.x, -rect.y);
 			
-			if (rect.width != 0) {
-				var singleFrame:BitmapData = new BitmapData(rect.width, rect.height, true, 0xff0000);
-				singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, rect.width, rect.height),true);
-				var label:String = (swf.currentLabel == null) ? 'all' : swf.currentLabel;
-				bitmaps.push(new FrameData(singleFrame, currentCaptureFrame, label));
-			} else {
-				bitmaps.push(null);
-			}
-			
-			findBoundsBmpd.fillRect(findBoundsBmpd.rect, 0xFFFFFF);
+			var singleFrame:BitmapData = new BitmapData(rect.width, rect.height, true, 0xff0000);
+			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, rect.width, rect.height),true);
+			var label:String = (swf.currentLabel == null) ? 'all' : swf.currentLabel;
+			bitmaps.push(new FrameData(singleFrame, currentCaptureFrame, label));
 			
 			currentCaptureFrame++;
 			
@@ -328,31 +326,6 @@ package com.gskinner.zoe.utils {
 				swf.removeEventListener(Event.ENTER_FRAME, handleVariableCaptureFrames);
 				finishCapture();
 			}
-		}
-		
-		protected function createOutputFile():void {
-			var fs:FileStream = new FileStream();
-			var saveFile:File;
-			
-			saveFile = new File(fileModel.selectedItem.destinationPath + '/' + fileModel.selectedItem.name + '.png');
-			
-			//Its possible to get security errors here.
-			try {
-				fs.open(saveFile, FileMode.WRITE);
-			} catch (e:Error) {
-				dispatchEvent(new CaptureEvent(CaptureEvent.INVALID_PATH, false, false, 'Invalid path:\n' + saveFile.nativePath + '\n' + e.message));
-				dispatchEvent(new Event(Event.COMPLETE));
-				return;
-			}
-			
-			if (saveFile.exists) {
-				saveFile.deleteFile();
-			}
-			
-			//fs.writeBytes(PNGEncoder.encode(captureBmpd));
-			fs.close();
-			
-			dispatchEvent(new Event(Event.COMPLETE));
 		}
 		
 		/**
@@ -374,24 +347,6 @@ package com.gskinner.zoe.utils {
 				rects.push(rect);
 				rectLookup[rect] = i;
 			}
-		}
-		
-		/**
-		 * Reads the timeline information from the loaded swf, and returns a formatted value.
-		 * 
-		 * @param formatter The formatter to use when exporting data.
-		 * Currently you can use EaselFormatter or JSONFormatter
-		 * @see com.gskinner.zoe.data.EaselFormatter
-		 * @see com.gskinner.zoe.data.JSONFormatter
-		 * 
-		 * @param fileName The file name of the swf, used to create correct stub code for image loading.
-		 * 
-		 */
-		public function createData(formatter:IStateFormatter, fileName:String):String {
-			var frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
-			var paddedBounds:Rectangle = frameBounds.clone();
-			paddedBounds.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
-			return formatter.format(getStates(), paddedBounds.width, paddedBounds.height, registrationPoint, fileName, frameCount, sheetData, isComplex);
 		}
 		
 		/**
@@ -449,8 +404,8 @@ package com.gskinner.zoe.utils {
 		 * @private
 		 * 
 		 */
-		protected function findNextPower2(value:Number):Number {
-			var pow:Number;
+		protected function findNextPower2(value:Number):int {
+			var pow:int;
 			for (;true;) {
 				pow = Math.pow(2, Math.round(Math.log(value++) / Math.log(2)));
 				if (pow >= value) {
@@ -512,6 +467,12 @@ package com.gskinner.zoe.utils {
 			var captureBmd:BitmapData;
 			var frameData:FrameData;
 			
+			var exportBitmaps:Array = [];
+			var requestedWidth:Number = fileModel.selectedItem.bitmapWidth;
+			var requestedHeight:Number = fileModel.selectedItem.bitmapHeight;
+			
+			exportedImageNames = [];
+			
 			//Reuse frames.
 			//This will drop bitmaps, and update the bitmaps array.
 			if (fileModel.selectedItem.reuseFrames && fileModel.selectedItem.threshold > 0) {
@@ -536,7 +497,7 @@ package com.gskinner.zoe.utils {
 			
 			//Pack it, if we need to.
 			if (fileModel.selectedItem.variableFrameDimensions) {
-				positionRects();
+				positionRects(requestedWidth);
 			}
 			
 			//Frames we will draw
@@ -554,12 +515,9 @@ package com.gskinner.zoe.utils {
 				}
 			}
 			
-			//If positions is empty, populate it 
+			//If positions is empty, populate it
 			if (!positions) {
 				//Build our normal un-packed rect list.
-				var requestedWidth:Number = fileModel.selectedItem.bitmapWidth || 4096;
-				var requestedHeight:Number = fileModel.selectedItem.bitmapHeight || 4096;
-				
 				var currX:Number = 0;
 				var currY:Number = 0;
 				
@@ -575,10 +533,7 @@ package com.gskinner.zoe.utils {
 					var bmpd:BitmapData = frameData.ref;
 					rect = bmpd.rect;
 					
-					var frameX:Number = currX;
-					var frameY:Number = currY;
-					
-					var pt:Point = new Point(frameX, frameY);
+					var pt:Point = new Point(currX, currY);
 					frameData.point = pt;
 					positions.push(pt);
 					pointLookup[pt] = rect;
@@ -587,6 +542,7 @@ package com.gskinner.zoe.utils {
 					sheetHeight = Math.max(sheetHeight, currY + rect.height);
 					
 					currX += rect.width;
+					
 					if (currX + rect.width > requestedWidth) {
 						currY += rect.height;
 						currX = 0;
@@ -595,45 +551,94 @@ package com.gskinner.zoe.utils {
 			}
 			
 			//Create export bitmap(s) ... if needed
-			var exportSheet:BitmapData = new BitmapData(sheetWidth, sheetHeight, true, 0xffffff);
-			
-			l = bitmapList.length;
-			for (i=0;i<l;i++) {
-				frameData = bitmapList[i];
-				bmpd = frameData.ref;
-				point = frameData.point;
+			if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_SPRITE_SHEET) {
+				var exportSheet:BitmapData = new BitmapData(requestedWidth, requestedHeight, true, 0xffffff);
+				var currentBitmapData:Object = {bmpd:exportSheet, w:0, h:0};
+				exportBitmaps.push(currentBitmapData);
 				
-				matrix = new Matrix();
-				matrix.translate(point.x, point.y);
+				var pointYOffset:Number = 0;
 				
-				rect = new Rectangle(point.x, point.y, bmpd.width, bmpd.height);
+				var drawBitmaps:Array = bitmapList.slice();
+				drawBitmaps.sort(sortBitmaps);
 				
-				exportSheet.draw(bmpd, matrix, null, null, rect, true);
-			}
-			
-			saveImage(fileModel.selectedItem.destinationPath + '/'+fileModel.selectedItem.name + '.png', exportSheet);
-			
-			isComplex = fileModel.selectedItem.variableFrameDimensions || fileModel.selectedItem.reuseFrames
-			
-			//Export other data
-			if (fileModel.selectedItem.exportFrames) {
+				l = drawBitmaps.length;
 				for (i=0;i<l;i++) {
-					frameData = (bitmaps[i] is Number)?bitmaps[bitmaps[i]]:bitmaps[i];
-					var bitmap:BitmapData = frameData.ref;
-					var saved:Boolean = saveImage(fileModel.selectedItem.destinationPath+'/'+fileModel.selectedItem.name+'_frame_'+i+'.png', bitmap);
-					//An error happened during export ... user already has been notifyes, so ignore and move on.
+					frameData = drawBitmaps[i];
+					bmpd = frameData.ref;
+					point = frameData.point;
+					var startPointY:Number = point.y;
+					point.y = point.y - pointYOffset;
+					
+					if (point.y + bmpd.height > requestedHeight) {
+						exportSheet = new BitmapData(requestedWidth, requestedHeight, true, 0xffffff);
+						currentBitmapData = {bmpd:exportSheet, w:0, h:0};
+						exportBitmaps.push(currentBitmapData);
+						pointYOffset += requestedHeight;
+						point.y = startPointY - pointYOffset;
+					}
+					
+					if (point.y < 0) {
+						pointYOffset += point.y;
+						point.y = 0;
+					}
+					
+					frameData.sheetIndex = exportBitmaps.length-1;
+					
+					matrix = new Matrix();
+					matrix.translate(point.x, point.y);
+					
+					rect = new Rectangle(point.x, point.y, bmpd.width, bmpd.height);
+					
+					currentBitmapData.w = Math.max(currentBitmapData.w, point.x + rect.width);
+					currentBitmapData.h = Math.max(currentBitmapData.h, point.y + rect.height);
+					
+					exportSheet.draw(bmpd, matrix, null, null, rect, true);
+				}
+				
+				l = exportBitmaps.length;
+				for (i=0;i<l;i++) {
+					var fileName:String = fileModel.selectedItem.name + (l>1?'_'+i:'') + '.png';
+					exportedImageNames.push(fileName);
+					var realWidth:Number = exportBitmaps[i].w;
+					var realHeight:Number = exportBitmaps[i].h;
+					bmpd = exportBitmaps[i].bmpd;
+					
+					//Size the bitmap to a pow(2).
+					//Doesn't work if we don't export all the frames (with correct positions);
+					//if (realWidth < 2048 || realHeight < 2048) {
+						//var newW:Number = findNextPower2(realWidth);
+						//var newH:Number = findNextPower2(realHeight);
+						var tmpBitmap:BitmapData = new BitmapData(realWidth, realHeight, true, 0xffffff);
+						tmpBitmap.copyPixels(bmpd,new Rectangle(0,0,realWidth,realHeight), new Point());
+						bmpd = tmpBitmap;
+						(exportBitmaps[i].bmpd as BitmapData).dispose();
+					//}
+					
+					saved = saveImage(fileModel.selectedItem.destinationPath + '/'+fileName, bmpd);
+					bmpd.dispose();
+					//An error happened during export ... user already has been notifyed, so ignore and move on.
 					if (!saved) { return; }
 				}
 			}
 			
-			if (fileModel.selectedItem.exportJSON) {
-				var json:String;
-				
-				if (!isComplex) {
-					json = createData(new JSONFormatter(), fileModel.selectedItem.name+'.png')
-				} else {
-					json = buildJSON();
+			isComplex = fileModel.selectedItem.variableFrameDimensions || fileModel.selectedItem.reuseFrames || fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME;
+			
+			//Export other data
+			if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
+				l = bitmapList.length;
+				for (i=0;i<l;i++) {
+					frameData = (bitmaps[i] is Number)?bitmaps[bitmaps[i]]:bitmaps[i];
+					var bitmap:BitmapData = frameData.ref;
+					fileName = fileModel.selectedItem.name+'_frame_'+i+'.png';
+					exportedImageNames.push(fileName);
+					var saved:Boolean = saveImage(fileModel.selectedItem.destinationPath+'/'+fileName, bitmap);
+					//An error happened during export ... user already has been notifyed, so ignore and move on.
+					if (!saved) { return; }
 				}
+			}
+			
+			if (fileModel.selectedItem.dataExportType == ExportType.DATA_JSON) {
+				var json:String = buildJSON();
 				
 				saveFile = new File(fileModel.selectedItem.destinationPath + '/'+fileModel.selectedItem.name + '.json');
 				fs.open(saveFile, FileMode.WRITE);
@@ -642,6 +647,13 @@ package com.gskinner.zoe.utils {
 			}
 			
 			dispatchEvent(new Event(Event.COMPLETE));
+		}
+		
+		protected function sortBitmaps(one:FrameData, two:FrameData):int {
+			if (one == null || two == null) {
+				return -1;
+			}
+			return one.point.y < two.point.y?-1:1;
 		}
 		
 		/**
@@ -654,45 +666,75 @@ package com.gskinner.zoe.utils {
 			var frameData:FrameData;
 			var rect:Rectangle;
 			var point:Point;
+			var frames:Object = [];
 			
-			//Build the frames array.
-			var frames:Array = [];
+			var states:Vector.<AnimationState> = getStates();
+			var statesCount:uint = states.length;
+			var animations:Object = {};
+			
+			var origRect:Rectangle = fileModel.selectedItem.frameBounds;
+			var regPoint:Point=fileModel.selectedItem.registrationPt;
+			
 			l = bitmaps.length;
-			for (i=0;i<l;i++) {
-				var tempData:Object = bitmaps[i];
-				if (!(tempData is Number)) {
-					frameData = bitmaps[i];
-					rect = pointLookup[frameData.point];
-					point = frameData.point;
-					
-					//Frame format: [x,y,w,h,index,regX,regY]
-					var ox:Number = 0;
-					var oy:Number = 0;
-					
-					if (fileModel.selectedItem.variableFrameDimensions) {
-						ox = -rect.x+fileModel.selectedItem.displayPt.x;
-						oy = -rect.y+fileModel.selectedItem.displayPt.y;
-					} else {
-						ox = fileModel.selectedItem.registrationPt.x;
-						oy = fileModel.selectedItem.registrationPt.y;
+			
+			if (isComplex) {
+				//Build the frames array.
+				for (i=0;i<l;i++) {
+					var tempData:Object = bitmaps[i];
+					if (!(tempData is Number)) {
+						frameData = bitmaps[i];
+						rect = pointLookup[frameData.point];
+						point = frameData.point;
+						
+						//Frame format: [x,y,w,h,index,regX,regY]
+						var captureRect:Rectangle = captureBounds[i];
+						var ox:Number = regPoint.x-captureRect.x;
+						var oy:Number = regPoint.y-captureRect.y;
+						
+						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
+							frames.push([0,0,rect.width, rect.height,i,ox,oy]);
+						} else {
+							frames.push([point.x, point.y,rect.width, rect.height,frameData.sheetIndex,ox,oy]);
+						}
 					}
-					frames.push([point.x, point.y,rect.width, rect.height,0,ox,oy]);
+				}
+				
+				//Update bitmaps array with correct index's
+				l = bitmaps.length;
+				var actualIndex:uint = 0;
+				for (i=0;i<l;i++) {
+					var data:Object = bitmaps[i];
+					if (data is FrameData) {
+						(data as FrameData).actualIndex = actualIndex;
+						actualIndex++;
+					}
+				}
+				
+				//Build labels out
+				for (i=0;i<statesCount;i++) {
+					var state:AnimationState = states[i];
+					animations[state.name] = {frames:getFramesForRange(state.startFrame, state.endFrame)};
+				}
+			} else {
+				var frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+				
+				frames = {width:frameBounds.width, 
+					height:frameBounds.height, 
+					regX:(registrationPoint) ? registrationPoint.x: 0, 
+						regY:(registrationPoint) ? registrationPoint.y: 0, 
+						count:frameCount };
+				
+				for(i=0;i<statesCount;i++) {
+					state = states[i];
+					animations[state.name] = [state.startFrame, state.endFrame];
 				}
 			}
 			
-			//Build labels out
-			var animations:Object = {};
-			var states:Vector.<AnimationState> = getStates();
-			l = states.length;
-			for (i=0;i<l;i++) {
-				var state:AnimationState = states[i];
-				animations[state.name] = {frames:getFramesForRange(state.startFrame, state.endFrame)};
-			}
 			
 			var jsonData:Object = {}
 			jsonData.frames = frames;
 			jsonData.animations = animations;
-			jsonData.images = [fileModel.selectedItem.name + '.png'];
+			jsonData.images = exportedImageNames;
 			
 			var jsonString:String = com.maccherone.json.JSON.encode(jsonData, true, 500);
 			
@@ -704,33 +746,27 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected function getFramesForRange(start:uint, end:uint):Array {
-			var frames:Array = [];
-			
-			var frameData:FrameData;
-			var actualIndex:uint = start;
-			var tempCount:uint = actualIndex;
-			
-			if (tempCount > 0) {
-				while (tempCount--) {
-					if (bitmaps[tempCount] is Number) {
-						actualIndex--;
-					}
+			if (start == end) {
+				if (bitmaps[start] is Number) {
+					return [bitmaps[start]];
+				} else {
+					return [start];
 				}
 			}
+			
+			var frames:Array = [];
+			var frameData:FrameData;
 			
 			for (var i:uint=start;i<end;i++) {
 				var data:Object = bitmaps[i];
 				
-				if (data is Number) { actualIndex--; continue; }
-				
-				frameData = data as FrameData;
-				
-				var count:uint = frameData.count;
-				while (count--) {
-					frames.push(actualIndex);
+				if (data is Number) {
+					frameData = bitmaps[data];
+				} else {
+					frameData = data as FrameData;
 				}
 				
-				actualIndex++;
+				frames.push(frameData.actualIndex);
 			}
 			
 			return frames;
@@ -821,7 +857,6 @@ package com.gskinner.zoe.utils {
 				//Flag this to be re-used
 				if (!diff && !(bitmaps[i] is Number)) {
 					bitmaps[i] = startIndex-1;
-					(bitmaps[bitmaps[i]] as FrameData).count++;
 				}
 			}
 		}
@@ -838,7 +873,7 @@ package com.gskinner.zoe.utils {
 		 * @private
 		 * 
 		 */
-		protected function positionRects():void {
+		protected function positionRects(maxWidth:Number):void {
 			//Sort them first
 			rects.sort(rectSort);
 			
@@ -854,12 +889,13 @@ package com.gskinner.zoe.utils {
 				ttlH += rect.height;
 			}
 			
-			var w:Number = ttlW / Math.sqrt(l) * 3;
+			var w:Number = maxWidth;
 			var h:Number = rects[l - 1].height;
 			var maxW:Number = 0;
 			var maxH:Number = 0;
 			var ry:Number = 0;
 			var rx:Number = 0;
+			var p:Point;
 			
 			while (rects.length) {
 				rect = rects.pop();
@@ -870,13 +906,15 @@ package com.gskinner.zoe.utils {
 						var rect2:Rectangle = rects[j];
 						if (rx+rect2.width <= w) {
 							// this fits.
-							positions[rectLookup[rect2]] = new Point(rx,ry);
+							p = new Point(rx,ry);
+							positions[rectLookup[rect2]] = p;
+							pointLookup[p] = rect2;
 							rx += rect2.width;
 							rects.splice(j,1);
 						}
 					}
 					
-					if (rx > maxW) {
+					if (rx + rect.width > maxW) {
 						maxW = rx;
 					}
 					
@@ -888,7 +926,7 @@ package com.gskinner.zoe.utils {
 					}
 				}
 				
-				var p:Point = new Point(rx,ry);
+				p = new Point(rx,ry);
 				positions[rectLookup[rect]] = p;
 				pointLookup[p] = rect;
 				rx += rect.width;

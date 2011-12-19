@@ -42,6 +42,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 	
 	<fx:Script>
 		<![CDATA[
+			import com.gskinner.zoe.data.ExportType;
 			import com.gskinner.zoe.data.SourceFileData;
 			import com.gskinner.zoe.model.FileModel;
 			
@@ -74,7 +75,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * When the SptiteSheet export is complete, this is called to update the ui correctly. 
 			 * 
 			 */
-			public static function completeExport(model:FileModel):void {
+			public static function completeExport(model:FileModel, exportedImages:Array):void {
 				instance.model = model;
 				
 				instance.spinner.visible = false;
@@ -89,16 +90,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				results.push('All assets were exported to: ' + unescapeMultiByte(selItem.destinationPath) + '\n');
 				
-				if (selItem.exportSheet) {
-					results.push('Sprite sheet exported as: ' + name + '.png');
+				switch (selItem.imageExportType) {
+					case ExportType.IMAGE_SPRITE_SHEET:
+						if (exportedImages.length == 1) {
+							results.push('Sprite sheet exported as: ' + exportedImages[0]);
+						} else {
+							results.push('Multiple sprite sheets exported\: ' + exportedImages.join('\n\t') + '\n');
+						}
+						
+						break;
+					case ExportType.IMAGE_FRAME:
+						results.push(model.swfCapture.totalFrames + ' frames were exported'); break;
 				}
 				
-				if (selItem.exportFrames) {
-					results.push(model.swfCapture.totalFrames + ' frames were exported');
-				}
-				
-				if (selItem.exportJSON) {
-					results.push('JSON exported as: ' + name + '.json');
+				switch (selItem.dataExportType) {
+					case ExportType.DATA_JSON:
+						results.push('JSON exported as: ' + name + '.json'); break;
 				}
 				
 				instance.outputText.text = unescapeMultiByte(results.join('\n'));

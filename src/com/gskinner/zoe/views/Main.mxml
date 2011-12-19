@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 		 xmlns:views="com.gskinner.zoe.views.*"
 		 xmlns:controls="com.gskinner.zoe.controls.*"
 		 xmlns:ui="com.gskinner.zoe.ui.*"
-		 creationComplete="init()"
+		 creationComplete="init()" resize="handleResize();"
 		 >
 	
 	<fx:Script>
@@ -165,7 +165,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				swfCaptureUtil.addEventListener(CaptureEvent.INVALID_BITMAP, hadleExportInvalid, false, 0, true);
 				swfCaptureUtil.addEventListener(CaptureEvent.INVALID_PATH, hadleExportInvalid, false, 0, true);
 				
-				
 				mainMenu.addEventListener(IndexChangeEvent.CHANGE, handleMainNavChange, false, 0, true);
 				
 				swfCapture.addEventListener(CaptureEvent.SWF_INIT, handleCaptureSwfChange, false, 0, true);
@@ -180,25 +179,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				addEventListener(Event.ENTER_FRAME, tick);
 				
-				bitmapExportSizes.dataProvider = new ArrayList([
-					{label:'Web    4096 x 4096', size:4096, type:ExportType.FORMAT_WEB},
-					{label:'Frames', type:ExportType.FORMAT_FRAME}
+				imageExportList.dataProvider = new ArrayList([
+					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'Frames', type:ExportType.IMAGE_FRAME}
 				]);
 				
-				exportFormatsDropDown.dataProvider = new ArrayList ([
-																	{label:'JSON', type:ExportType.EXPORT_JSON},
-																	{label:'None', type:ExportType.EXPORT_NONE}
-																	]);
+				dataExportList.dataProvider = new ArrayList ([
+																{label:'JSON', type:ExportType.DATA_JSON},
+																{label:'None', type:ExportType.NONE}
+															]);
 				
 				//Add add some help tooltips
-				exportSpriteSheetHelpBtn.toolTip = "Exports a png image containing all the swfs frames. ";
-				exportSizesHelpBtn.toolTip = "The maximum bitmap size that will be exported. (the actual size may be smaller based on your animation). Selecting Frame will export each individual frames as a png. ";
+				exportSizesHelpBtn.toolTip = "SpriteSheet: Exports one or more images (based on available size) with multiple frames on each image.\nFrames: Exports individual PNG's for each frame.";
 				previewPanel.statesListHelpBtn.toolTip = "If your swf has its states labeled using frame labels, they will be displayed here.";
-				exportJsonHelpBtn.toolTip = "Exports a generic JSON encoded file containing your animations information.";
-				numFramesHelp.toolTip = "Total number of frames to export, setting to 0 will export everything.";
+				exportJsonHelpBtn.toolTip = "Exports a JSON file that defines your animations, for use with EaselJS.";
+				numFramesHelp.toolTip = "Total number of frames to export, starting from 0, setting to 0 will export everything.";
 				refreshBtn.toolTip = "Reloads your swf from disk, if you have changed it.";
 				addFileBtn.toolTip = "Browse for a swf file.  You can also drag and drop file(s) onto the application.";
-				exportBtn.toolTip = "Exports your animation to disk";
+				exportBtn.toolTip = "Exports your animation to disk.";
 				deleteButton.toolTip = "Deletes the current item from the list, local files are not modified.";
 				exportPaddingHelpBtn.toolTip = "There is no visual preview for padding. It's applied to each frame during export.";
 				thresholdHelpBtn.toolTip = "Adjusting the scaling magnitude or intensity in which frames are to be compared for export.";
@@ -210,6 +208,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				//Delay a few frames to reduce stalling on startup
 				CallLater.call(handleListChange, 3, [null]);
+				
+				this.addEventListener(Event.ADDED_TO_STAGE, handleStage, false, 0, true);
+			}
+			
+			protected function handleStage(event:Event):void {
+				handleResize();
+			}
+			
+			protected function handleResize():void {
+				if (!swfCaptureUtil) { return; }
+				swfCaptureUtil.createSizeBitmap(this.stage);
 			}
 			
 			protected function addPreview():void {
@@ -238,7 +247,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected function updateRegPt():void {
 				var pt:Point = fileModel.selectedItem.displayPt as Point;
 				this.swfCapture.setRegPt(pt);
-				swfCapture.displayPadding(variableFrameDimensions.selected);
+				swfCapture.displayPadding(false);
 
 			}
 			
@@ -270,7 +279,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleCaptureComplete(event:Event):void {
-				ExportDialog.completeExport(fileModel);
+				ExportDialog.completeExport(fileModel, swfCaptureUtil.exportedImageNames);
 				stateChange();
 			}
 			
@@ -317,7 +326,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				fileModel.registrationPt = data.relativePt;
 				
 				swfCaptureUtil.updateRegistrationPoint(data.relativePt);
-				
 			}
 			
 			/**
@@ -354,6 +362,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				//Reset the correct state
 				stateChange();
+				
 				//Places registration point
 				if (fileModel.selectedItem.isDirty) {
 					this.swfCapture.findMovieRegPoint();
@@ -384,76 +393,61 @@ OTHER DEALINGS IN THE SOFTWARE.
 					sourcePathTxt.text = '';
 					sourceNameTxt.text = '';
 					destinationTxt.text = '';
-					bitmapExportSizes.selectedIndex = 0;
-					exportSpriteSheetChk.selected = false;
 					reuseFramesChk.selected = false;
 					
-					exportFormatsDropDown.selectedIndex = 0;
+					dataExportList.selectedIndex = 0;
+					imageExportList.selectedIndex = 0;
 					
 					variableFrameDimensions.selected = false;
-					return;
-				}
-				
-				swfCapture.source = item.sourcePath;
-				exportPadding.value = item.exportPadding;
-				threshold.value = isNaN(item.threshold) ? 0.5 : item.threshold;
-				trace(threshold.value);
-				thresholdLbl.text = String(Math.round(threshold.value*100));
-				reuseFramesChk.selected = item.reuseFrames;
-				variableFrameDimensions.selected = item.variableFrameDimensions;
-				
-				
-				if (exportPadding.value > 1) { swfCapture.padding = exportPadding.value; }
-				exportPadding.enabled = !variableFrameDimensions.selected;
-				
-				sourcePathTxt.text = unescapeMultiByte(item.sourcePath);
-				sourceNameTxt.text = unescapeMultiByte(item.name);
-				destinationTxt.text = unescapeMultiByte(item.destinationPath);
-				showGrid = item.showGrid !== false;
-				
-				previewPanel.selectedColor = item.backgroundColor;
-				previewPanel.updateColorPickerSkin(showGrid);
-				bitmapExportSizes.selectedIndex = item.bitmapWidth;
-				exportSpriteSheetChk.selected = item.exportSheet;
-				numFramesStep.value = item.frameCount || 0;
-				
-				var exportFormatIndex:int;
-				if (item.exportType == null) {
-					exportFormatsDropDown.selectedIndex = 0;
 				} else {
-					exportFormatIndex = findExportTypeIndex(item.exportType);
-					exportFormatsDropDown.selectedIndex = exportFormatIndex;
+					swfCapture.source = item.sourcePath;
+					exportPadding.value = item.exportPadding;
+					threshold.value = isNaN(item.threshold) ? 0.5 : item.threshold;
+					
+					thresholdLbl.text = String(Math.round(threshold.value*100));
+					reuseFramesChk.selected = item.reuseFrames;
+					variableFrameDimensions.selected = item.variableFrameDimensions;
+					
+					if (exportPadding.value > 1) { swfCapture.padding = exportPadding.value; }
+					
+					sourcePathTxt.text = unescapeMultiByte(item.sourcePath);
+					sourceNameTxt.text = unescapeMultiByte(item.name);
+					destinationTxt.text = unescapeMultiByte(item.destinationPath);
+					showGrid = item.showGrid !== false;
+					
+					previewPanel.selectedColor = item.backgroundColor;
+					previewPanel.updateColorPickerSkin(showGrid);
+					numFramesStep.value = item.frameCount || 0;
+					
+					imageExportList.selectedIndex = getListItemIndexByType(imageExportList.dataProvider as ArrayList, item.imageExportType);
+					dataExportList.selectedIndex = getListItemIndexByType(dataExportList.dataProvider as ArrayList, item.dataExportType);
+					
+					var bitmapWidth:Number = item.bitmapWidth || 0;
+					var bitmapHeight:Number = item.bitmapHeight || 0;
+					
+					changeImageExportType();
+					changeDataExportType();
+					
+					updateUI(item.frameBounds);
+					updateCapture(item.frameBounds);
+					updateViewFromColorChange();
+					
+					updateRegPt();
 				}
-				
-				var bitmapWidth:Number = item.bitmapWidth || 0;
-				var bitmapHeight:Number = item.bitmapHeight || 0;
-				
-				/*if (bitmapHeight == 0 || bitmapWidth == 0) {
-					bitmapExportSizes.selectedIndex = 0;
-				} else if (bitmapHeight == bitmapWidth) {
-					trace('item.formatExportType', item.formatExportType);
-					var idx:int = findBitmapIndex(item.formatExportType);
-					trace('idx',idx);
-					bitmapExportSizes.selectedIndex = idx;
-					//bitmapExportSizes.selectedIndex = idx == -1?bitmapExportSizes.dataProvider.length-1:idx;
-				} else {
-					bitmapExportSizes.selectedIndex = bitmapExportSizes.dataProvider.length-1;
-				}*/
-				var formatIndex:int;
-				if (item.formatExportType == null) {
-					bitmapExportSizes.selectedIndex = 0;
-				} else {
-					formatIndex = findBitmapIndex(item.formatExportType);
-					bitmapExportSizes.selectedIndex = formatIndex;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function getListItemIndexByType(array:ArrayList, value:String):int {
+				var l:uint = array.length;
+				for (var i:uint=0;i<l;i++) {
+					if (array.getItemAt(i).type == value) {
+						return i;
+					}
 				}
-				
-				changeExportSize();
-				
-				updateUI(item.frameBounds);
-				updateCapture(item.frameBounds);
-				updateViewFromColorChange();
-				
-				updateRegPt();
+				return 0;
 			}
 			
 			/**
@@ -461,25 +455,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function findBitmapIndex(value:String):int {
-				var l:uint = bitmapExportSizes.dataProvider.length;
+				var l:uint = imageExportList.dataProvider.length;
 				for (var i:uint=0;i<l;i++) {
-					if (bitmapExportSizes.dataProvider.getItemAt(i).type == value) {
-						return i;
-					}
-				}
-				return -1;
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function findExportTypeIndex(value:String):int {
-				var items:ArrayList = exportFormatsDropDown.dataProvider as ArrayList;
-				var l:uint = items.length;
-				for(var i:uint=0;i<l;i++) {
-					var item:Object = items.getItemAt(i);
-					if (item.type == value) {
+					if (imageExportList.dataProvider.getItemAt(i).type == value) {
 						return i;
 					}
 				}
@@ -649,6 +627,25 @@ OTHER DEALINGS IN THE SOFTWARE.
 				} else if (swfCapture) {
 					swfCapture.stop();
 				}
+				
+				updateLiveBoundsUpdate();
+			}
+			
+			protected function updateLiveBoundsUpdate():void {
+				if (_playMode == PLAY && swfCapture && this.variableFrameDimensions.selected) {
+					this.addEventListener(Event.ENTER_FRAME, updatePrevewBounds, false, 0, true);
+					swfCapture.mouseEnabled = false;
+				} else if (!this.variableFrameDimensions.selected) {
+					this.removeEventListener(Event.ENTER_FRAME, updatePrevewBounds);
+					updateUI((fileModel.selectedItem as SourceFileData).frameBounds);
+					updateCapture((fileModel.selectedItem as SourceFileData).frameBounds);
+					swfCapture.mouseEnabled = true;
+				}
+			}
+			
+			protected function updatePrevewBounds(event:Event):void {
+				var bounds:Rectangle = swfCaptureUtil.getCurrentFrameBounds();
+				swfCapture.captureBounds = bounds;
 			}
 			
 			/**
@@ -761,23 +758,20 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function changeExportSize():void {
+			protected function changeImageExportType():void {
 				var w:Number; 
 				var h:Number;
 				
-				/*if (bitmapExportSizes.selectedIndex == 1) {
-					fileModel.selectedItem.exportFrames = true;
-					return;
-				} else {
-					fileModel.selectedItem.exportFrames = false;
-				}*/
-				
-				var option:String = bitmapExportSizes.selectedItem.type;
-				fileModel.selectedItem.formatExportType = option;
-				
-				h = w = bitmapExportSizes.selectedItem.size;
+				var option:String = imageExportList.selectedItem.type;
+				h = w = imageExportList.selectedItem.size;
 				
 				fileModel.setSelectedBitmapSize(w, h);
+				fileModel.selectedItem.imageExportType = option;
+			}
+			
+			protected function changeDataExportType():void {
+				var option:String = dataExportList.selectedItem.type;
+				fileModel.selectedItem.dataExportType = option;
 			}
 			
 			/**
@@ -847,7 +841,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function export():void {
 				var selectedFile:SourceFileData = fileModel.selectedItem;
-				if (!selectedFile.exportFrames && !selectedFile.exportJSON && !selectedFile.exportSheet) {
+				
+				if (selectedFile.imageExportType == ExportType.NONE && selectedFile.dataExportType == ExportType.NONE) {
 					var alert:Alert = Alert.show('There is nothing to export.', 'Error', Alert.OK, FlexGlobals.topLevelApplication as Sprite, handleConfirmNoExport);
 					alert.validateNow();
 					return;
@@ -936,20 +931,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 				} else {
 					value = (event.target as CheckBox).selected;
 				}
+				
 				switch (event.target) {
 					case variableFrameDimensions:
 						fileModel.selectedItem.variableFrameDimensions = value;
-						this.swfCapture.displayPadding(value);
+						updateLiveBoundsUpdate();
 						break;
 					case reuseFramesChk:
 						fileModel.selectedItem.reuseFrames = value; 
 						swfCaptureUtil.threshold = (value) ? threshold.value : 0;
 						break;
-					case exportFormatsDropDown:
-						fileModel.selectedItem.exportType = option;
+					case dataExportList:
+						fileModel.selectedItem.dataExportType = option;
 						break;
-					case exportSpriteSheetChk:
-						fileModel.selectedItem.exportSheet = value; break;
+					case imageExportList:
+						fileModel.selectedItem.imageExportType = option;
+						break;
 				}
 				
 				fileModel.saveState();
@@ -963,14 +960,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				return unescapeMultiByte(item.name);
 			}
 			
-			protected function handleToleranceFocusIn():void {
-				trace('handleToleranceFocusIn');
-			}
-			
-			protected function handleToleranceFocusOut():void {
-				trace('handleToleranceFocusOut')
-			}
-			
+			/**
+			 * @private
+			 * 
+			 */
 			protected function handleToleranceEnter():void {
 				var value:Number  = Number(this.thresholdLbl.text);
 				if (value > 100) {
@@ -984,32 +977,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 				swfCaptureUtil.threshold = threshold.value; 
 			}
 			
+			/**
+			 * @private
+			 * 
+			 */
 			protected function formatToleranceLbl(value:String):String {
 				return 'Threshold ' + Math.round(Number(value)*100) + ' of ' + 100;
 			}
-			
-			/*protected function visualize(event:CaptureEvent):void {
-				var viz:Shape = new Shape();
-				var u:UIComponent = new UIComponent();
-				
-				u.addChild(viz);
-				u.includeInLayout = false; 
-				addElement(u);
-				
-				var g:Graphics = viz.graphics;
-				var l:uint = swfCaptureUtil.sheetData.length;
-				
-				for (var i:uint=1; i<l; i++) {
-					var o:Object = swfCaptureUtil.sheetData[i];
-					g.lineStyle(0,0xFF0000,1);
-					g.drawRect(o.x,o.y,o.w,o.h);
-					g.lineStyle(0,0xFF00,1);
-					g.drawCircle(o.x+o.ox,o.y+o.oy,3);
-				}
-				g.lineStyle(2,0x0000FF,1);
-				g.drawRect(1,1,swfCaptureUtil.sheetBmpd.width,swfCaptureUtil.sheetBmpd.height);
-				
-			}*/
 			
 		]]>
 	</fx:Script>
@@ -1060,6 +1034,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			<s:layout>
 				<s:VerticalLayout />
 			</s:layout>
+			
 			<s:HGroup id="boundsLabelView" gap="10" width="100%">
 				<s:RichText text="x" width="50" styleName="contentText" includeInLayout="false" visible="false" />
 				<s:RichText text="y" width="70" styleName="contentText" includeInLayout="false" visible="false" />
@@ -1069,20 +1044,21 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<mx:Spacer width="203" />
 				<s:RichText text="Reuse Frames" width="100" styleName="contentText" />
 			</s:HGroup>
+			
 			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
 				<s:NumericStepper id="xValue" minimum="0" maximum="1500"  width="50" stepSize="1" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" /> 
 				<s:NumericStepper id="yValue" minimum="0" maximum="1500"  stepSize="1"  width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
-				<!--  <mx:Spacer width="10" /> -->
+				
 				<s:NumericStepper id="widthValue" value="75" minimum="5" maximum="1500" stepSize="1" width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
 				<s:NumericStepper id="heightValue" value="75" minimum="5" maximum="1500" stepSize="1" width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
-				<!-- <mx:Spacer width="10" /> -->
+				
 				<s:NumericStepper id="exportPadding" width="40" height="20" minimum="0" maximum="99" stepSize="1"  change="handleExportPaddingChange()" />
 				<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<!-- <s:VGroup width="100%" paddingTop="-8"> -->
+				
 				<s:CheckBox id="variableFrameDimensions" label="Variable Frame" change="handleExportFormatChange(event)"/>
 				<s:Button id="variableFrameDimensionsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:Button label="Calculate Bounds" styleName="simpleButton"  click="findBounds()" />
-				<!-- </s:VGroup> -->
+				<s:Button label="Calculate Bounds" styleName="simpleButton" enabled="{!variableFrameDimensions.selected}"  click="findBounds()" />
+				
 				<mx:Spacer width="10" />
 				<s:CheckBox id="reuseFramesChk" label="" change="handleExportFormatChange(event)"/>
 				<s:HGroup paddingLeft="-5" paddingTop="5" width="100%">
@@ -1101,7 +1077,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:VerticalLayout />
 			</s:layout>
 			<s:HGroup>
-				<s:RichText text="Frame count" styleName="contentText" width="{exportSpriteSheetChk.x-6}" />
+				<s:RichText text="Frame count" styleName="contentText" />
 				<s:RichText text="Export" styleName="contentText" />
 			</s:HGroup>
 			<s:HGroup width="100%" height="100%" verticalAlign="middle">
@@ -1109,13 +1085,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:NumericStepper id="numFramesStep" width="50" height="20" maximum="999" change="handleNumFramesStepChange()" />
 				<s:Label text="frames" />
 				<s:Button id="numFramesHelp" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<mx:Spacer width="100%" />
-				<s:CheckBox id="exportSpriteSheetChk" label="SpriteSheet" change="handleExportFormatChange(event)" />
-				<s:Button id="exportSpriteSheetHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:Label text="Format:" verticalAlign="middle" height="18" paddingTop="3" />
-				<s:DropDownList id="bitmapExportSizes" height="18" width="145" change="changeExportSize()" />
+				<s:Label text="Image format " verticalAlign="middle" height="18" paddingTop="3" />
+				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
 				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:DropDownList id="exportFormatsDropDown" width="100" change="handleExportFormatChange(event)" />
+				<s:Label text="Data format " verticalAlign="middle" height="18" paddingTop="3" />
+				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
 				<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 			</s:HGroup>
 		</s:NavigatorContent>
@@ -1124,7 +1098,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 	<ui:Divider width="100%" height="2" color="0x666666" />
 	
 	<!-- Displays the loaded swf -->
-	
 	<views:CapturePreview id="swfCapture" />
 	
 </s:VGroup>

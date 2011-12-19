@@ -38,8 +38,8 @@ package com.gskinner.zoe.data {
 		public var rect:Rectangle;
 		public var point:Point;
 		public var index:uint;
-		
-		public var count:uint = 1;
+		public var sheetIndex:int = 0;
+		public var actualIndex:uint;
 		
 		public function FrameData(bmpd:BitmapData, index:uint, label:String) {
 			this.ref = bmpd;

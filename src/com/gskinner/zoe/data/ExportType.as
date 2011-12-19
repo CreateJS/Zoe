@@ -27,37 +27,36 @@
 
 package com.gskinner.zoe.data {
 	
+	/**
+	 * Constants used for Export formats.
+	 * 
+	 */
 	public class ExportType {
-		
-		/**
-		 * Constants used for Export formats.
-		 * 
-		 */
 		
 		/**
 		 * When set Zoe will export individual PNG files.
 		 * 
 		 */
-		public static const FORMAT_FRAME:String = 'formatFrame';
+		public static const IMAGE_FRAME:String = 'imageFrame';
 		
 		/**
 		 * When set Zoe will export a single PNG sprite sheet.
 		 * 
 		 */
-		public static const FORMAT_WEB:String = 'formatWeb';
-		
-		/**
-		 * When set Zoe will export no data.
-		 * 
-		 */
-		public static const EXPORT_NONE:String = 'exportNone';
+		public static const IMAGE_SPRITE_SHEET:String = 'imageSheet';
 		
 		/**
 		 * When set Zoe will export JSON stub code for Easel.
 		 * @see http://www.easeljs.com
 		 * 
 		 */
-		public static const EXPORT_JSON:String  = 'exportJson';
+		public static const DATA_JSON:String  = 'dataJson';
+		
+		/**
+		 * When set Zoe will export no data.
+		 * 
+		 */
+		public static const NONE:String = 'none';
 		
 	}
 }

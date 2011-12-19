@@ -34,7 +34,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 -->
 <s:SkinnableContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
 		 xmlns:s="library://ns.adobe.com/flex/spark" creationComplete="init()"
-		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
 		 resize="handleResize()" width="100%" height="100%"
 		 >
 	
@@ -193,12 +193,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			public var isDown:Boolean = false;
-			
-			/**
-			 * @private
-			 * 
-			 */
-			public var showBoundBox:Boolean = true;
 			
 			protected function init():void {
 				alphaGridBitmap = (new alphaGrid() as FlexBitmap).bitmapData;
@@ -396,6 +390,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				this.setElementIndex(dlContainer, this.numElements - 1);
 				dlContainer.alpha = (padding < 1) ? 0:1; 
 				
+				if (dlContainer.alpha != 0) {
+					dlContainer.alpha = mouseEnabled?1:.6;
+				}
+				
 				if (_captureBounds) {
 					dl.update(_captureBounds, padding);
 					dl.x = _captureBounds.x;
@@ -477,7 +475,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (_captureBounds != null) {
 					g.beginFill(0xffffff, .2);
 					
-					g.lineStyle(1, 0x0, (showBoundBox) ? 1 : 0.1, true);
+					g.lineStyle(1, 0x0, mouseEnabled ? 1 : 0.6, true);
 					var displayBounds:Rectangle = _captureBounds.clone();
 					displayBounds.inflate(1, 1); //Inflate by 1 so animation is within the preview.
 					g.drawRect(displayBounds.x, displayBounds.y, displayBounds.width, displayBounds.height);
@@ -504,7 +502,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function onKeyDown(event:KeyboardEvent):void {
 				dragMode = null;
-				if (_captureBounds == null) { return; }
+				if (_captureBounds == null || !mouseEnabled) { return; }
 				
 				if (event.shiftKey) {
 					switch (event.keyCode) {
@@ -585,6 +583,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleMouseDown():void {
+				if (!mouseEnabled) { return; }
+				
 				if (cursorInResizeBounds()) {
 					dragMode = RESIZE;
 					resizeStartPoint.x = _captureBounds.x + (background.mouseX-(_captureBounds.x+_captureBounds.width));
@@ -625,12 +625,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleMouseMove():void {
+				if (!mouseEnabled) { Mouse.cursor = MouseCursor.AUTO; return; }
+				
 				if (cursorInResizeBounds()) {
 					Mouse.cursor = MouseCursor.BUTTON;
 				} else if (cursorInCaptureBounds()) {
-					
-						Mouse.cursor = MouseCursor.HAND;
-					
+					Mouse.cursor = MouseCursor.HAND;
 				} else {
 					Mouse.cursor = MouseCursor.AUTO;
 				}

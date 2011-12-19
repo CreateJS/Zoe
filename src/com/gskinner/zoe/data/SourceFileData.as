@@ -80,61 +80,15 @@ package com.gskinner.zoe.data {
 		public var sourcePath:String;
 		
 		/**
-		 * Dimensions in which sprite sheet is exported.
-		 */
-		public var _formatExportType:String;
-		
-		/**
-		 * Format type to export.
-		 */
-		public var _exportType:String;
-		
-		/**
-		 * Specifies whether Easel stub code should be exported or not. 
-		 */
-		public function set exportJSON(value:Boolean):void {
-			_exportJSON = value;
-		}
-		public function get exportJSON():Boolean { return _exportJSON; }
-		
-		public function get exportType():String { return _exportType; }
-		public function set exportType(value:String):void {
-			_exportType = value;
-			if (_exportType == ExportType.EXPORT_NONE) {
-				exportJSON = false;
-			} else if (_exportType == ExportType.EXPORT_JSON) {
-				exportJSON = true;
-			}
-		}
-		
-		/**
 		 * Sets the image format to be exported. (A full SpriteSheet, or individual frames)
 		 * 
 		 */
-		public function get formatExportType():String { return _formatExportType; }
-		public function set formatExportType(value:String):void {
-			_formatExportType = value;
-			if (_formatExportType == ExportType.FORMAT_FRAME) {
-				exportFrames = true;
-			} else if (_formatExportType == ExportType.FORMAT_WEB) {
-				exportFrames = false;
-			}
-		}
+		public var imageExportType:String;
 		
 		/**
 		 * Specifies whether there JSON source should be exported or not.
 		 */
-		protected var _exportJSON:Boolean = true;
-		
-		/**
-		 * Specifies whether or not to export the spritesheet, defaults to true.
-		 */
-		public var exportSheet:Boolean = true;
-		
-		/**
-		 * Specifies whether or not to export individual frames.
-		 */
-		public var exportFrames:Boolean;
+		public var dataExportType:String;
 		
 		/**
 		 * Specifies threshold level for comparing Bitmapdata.
@@ -226,18 +180,16 @@ package com.gskinner.zoe.data {
 				destinationPath:destinationPath,
 				sourcePath:sourcePath,
 				name:name,
-				exportJSON:exportJSON,
-				exportSheet:exportSheet,
-				exportFrames:exportFrames,
 				threshold:threshold,
+				
+				imageExportType:imageExportType,
+				dataExportType:dataExportType,
 				
 				reuseFrames:reuseFrames,
 				registrationPt:registrationPt,
 				variableFrameDimensions:variableFrameDimensions,
 				displayPt:displayPt,
 				frameCount:frameCount,
-				formatExportType:formatExportType,
-				exportType:exportType,
 				isDirty:isDirty
 			}
 			
@@ -260,16 +212,13 @@ package com.gskinner.zoe.data {
 			name = value.name;
 			displayPt = (value.displayPt!= null) ? new Point(value.displayPt.x, value.displayPt.y) : new Point(0, 0);
 			variableFrameDimensions = value.variableFrameDimensions;
-			exportJSON = value.exportJSON;
-			exportSheet = value.exportSheet;
-			exportFrames = value.exportFrames;
-			reuseFrames = value.reuseFrames;
 			registrationPt = (value.registrationPt != null) ? new Point(value.registrationPt.x, value.registrationPt.y) : new Point(0, 0);
 			threshold = isNaN(value.threshold) ? 0 : value.threshold;
 			frameCount = isNaN(value.frameCount)? 0: value.frameCount;
-			formatExportType = value.formatExportType;
-			exportType = value.exportType;
 			isDirty = value.isDirty;
+			reuseFrames = value.reuseFrames;
+			dataExportType = value.dataExportType || ExportType.DATA_JSON;
+			imageExportType = value.imageExportType || ExportType.IMAGE_SPRITE_SHEET;
 		}
 	}
 }
