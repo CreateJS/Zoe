@@ -1,0 +1,1103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Zoë by gskinner.com.
+Visit www.gskinner.com/blog for documentation, updates and more free code.
+
+Copyright (c) 2010 Grant Skinner
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+-->
+
+<!---
+	Defines the main view for the application.
+-->
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="100%" height="100%" gap="10"
+		 xmlns:views="com.gskinner.zoe.views.*"
+		 xmlns:controls="com.gskinner.zoe.controls.*"
+		 xmlns:ui="com.gskinner.zoe.ui.*"
+		 creationComplete="init()" resize="handleResize();"
+		 >
+	
+	<fx:Script>
+		<![CDATA[
+			import com.gskinner.utils.CallLater;
+			import com.gskinner.zoe.controls.ColorPreviewText;
+			import com.gskinner.zoe.data.AnimationState;
+			import com.gskinner.zoe.data.ExportType;
+			import com.gskinner.zoe.data.SourceFileData;
+			import com.gskinner.zoe.events.CaptureEvent;
+			import com.gskinner.zoe.events.PreviewPanelEvent;
+			import com.gskinner.zoe.model.FileModel;
+			import com.gskinner.zoe.utils.CaptureSWF;
+			import com.gskinner.zoe.utils.FindSWFBounds;
+			
+			import mx.collections.ArrayList;
+			import mx.controls.Alert;
+			import mx.core.FlexGlobals;
+			
+			import spark.components.ToggleButton;
+			import spark.events.IndexChangeEvent;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected const PLAY:uint = 0;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected const PAUSE:uint = 2;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var swfFile:File;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var _playMode:uint;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var lastPlayMode:uint;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var swfCaptureUtil:CaptureSWF;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var previewPanel:PreviewPanel;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var saveFile:File;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var statesDataProvider:ArrayList;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var showGrid:Boolean;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var fileModel:FileModel;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected var selectedState:AnimationState;
+			
+			/**
+			 * Loads an array of swfs in, probably from a drag and drop.
+			 * 
+			 */
+			public function loadSwfs(files:Array):void {
+				
+				var l:uint = files.length;
+				for (var i:uint=0;i<l;i++) {
+					var file:File = files[i];
+					fileModel.addItem(file);
+				}
+				
+				swfCapture.source = fileModel.selectedItem.sourcePath;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function init():void {
+				fileModel = new FileModel();
+				fileModel.target = fileList;
+				fileModel.swfCapture = swfCapture;
+				fileModel.addEventListener(Event.CHANGE, handleListChange, false, 0, true);
+				
+				swfCapture.fileModel = fileModel;
+				
+				swfCaptureUtil = new CaptureSWF(fileModel);
+				swfCaptureUtil.addEventListener(CaptureEvent.BEGIN, handleCaptureBegin, false, 0, true);
+				swfCaptureUtil.addEventListener(Event.COMPLETE, handleCaptureComplete, false, 0, true);
+				swfCaptureUtil.addEventListener(CaptureEvent.INVALID_BITMAP, hadleExportInvalid, false, 0, true);
+				swfCaptureUtil.addEventListener(CaptureEvent.INVALID_PATH, hadleExportInvalid, false, 0, true);
+				
+				mainMenu.addEventListener(IndexChangeEvent.CHANGE, handleMainNavChange, false, 0, true);
+				
+				swfCapture.addEventListener(CaptureEvent.SWF_INIT, handleCaptureSwfChange, false, 0, true);
+				swfCapture.addEventListener(CaptureEvent.REG_PT_CHANGE, handleCaptureRegPtChange, false, 0, true);
+				swfCapture.addEventListener(Event.CHANGE, handleCaptureChange, false, 0, true);
+				
+				addPreview();
+				
+				playMode = PLAY;
+				
+				previewPanel.frameSlider.maximum = 0;
+				
+				addEventListener(Event.ENTER_FRAME, tick);
+				
+				imageExportList.dataProvider = new ArrayList([
+					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'Frames', type:ExportType.IMAGE_FRAME}
+				]);
+				
+				dataExportList.dataProvider = new ArrayList ([
+																{label:'JSON', type:ExportType.DATA_JSON},
+																{label:'None', type:ExportType.NONE}
+															]);
+				
+				//Add add some help tooltips
+				exportSizesHelpBtn.toolTip = "SpriteSheet: Exports one or more images (based on available size) with multiple frames on each image.\nFrames: Exports individual PNG's for each frame.";
+				previewPanel.statesListHelpBtn.toolTip = "If your swf has its states labeled using frame labels, they will be displayed here.";
+				exportJsonHelpBtn.toolTip = "Exports a JSON file that defines your animations, for use with EaselJS.";
+				numFramesHelp.toolTip = "Total number of frames to export, starting from 0, setting to 0 will export everything.";
+				refreshBtn.toolTip = "Reloads your swf from disk, if you have changed it.";
+				addFileBtn.toolTip = "Browse for a swf file.  You can also drag and drop file(s) onto the application.";
+				exportBtn.toolTip = "Exports your animation to disk.";
+				deleteButton.toolTip = "Deletes the current item from the list, local files are not modified.";
+				exportPaddingHelpBtn.toolTip = "There is no visual preview for padding. It's applied to each frame during export.";
+				thresholdHelpBtn.toolTip = "Adjusting the scaling magnitude or intensity in which frames are to be compared for export.";
+				variableFrameDimensionsHelpBtn.toolTip = "Performs rectangle packing optimizing sizing for sprites.";
+				statesDataProvider = new ArrayList();
+				previewPanel.stateList.dataProvider = statesDataProvider;
+				
+				exportView.invalidateDisplayList();
+				
+				//Delay a few frames to reduce stalling on startup
+				CallLater.call(handleListChange, 3, [null]);
+				
+				this.addEventListener(Event.ADDED_TO_STAGE, handleStage, false, 0, true);
+			}
+			
+			protected function handleStage(event:Event):void {
+				handleResize();
+			}
+			
+			protected function handleResize():void {
+				if (!swfCaptureUtil) { return; }
+				swfCaptureUtil.createSizeBitmap(this.stage);
+			}
+			
+			protected function addPreview():void {
+				previewPanel = new PreviewPanel();
+				previewPanel.addEventListener(PreviewPanelEvent.COLOR_CHANGED, handleBgColorChange, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.COLOR_OPEN, handleBackgroundColorOpen, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.COLOR_MOVE, handleColorPickerMove, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.CHANGE_STATE, handleStateChange, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.CHANGE_START_FRAME_POSITION, handleSliderStartChange, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.CHANGE_END_FRAME_POSITION, handleSliderEndChange, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.FRAME_RATE_CHANGED, handleFrameRateChange, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.PLAY_CLICKED, togglePlayClick, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.UPDATE_FRAME_POSITION, handlePreviewFramePosition, false, 0, true);
+				previewPanel.addEventListener(PreviewPanelEvent.UPDATE_SLIDER_POSITION, updateSliderPosition, false, 0, true);
+				
+				previewPanel.includeInLayout = false;
+				updatePreviewPosition();
+				addElement(previewPanel);
+			}
+			
+			protected function updatePreviewPosition():void {
+				previewPanel.x = (swfCapture.x + swfCapture.width) - (previewPanel.width + 5);
+				previewPanel.y = (swfCapture.y + swfCapture.height) - (previewPanel.height + 5);
+			}
+			
+			protected function updateRegPt():void {
+				var pt:Point = fileModel.selectedItem.displayPt as Point;
+				this.swfCapture.setRegPt(pt);
+				swfCapture.displayPadding(false);
+
+			}
+			
+			protected function handleCaptureChange(event:Event):void {
+				updateCapture(swfCapture.captureBounds);
+				updatePreviewPosition();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function hadleExportInvalid(event:CaptureEvent):void {
+				var alert:Alert = Alert.show(event.message);
+				alert.validateNow();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleCaptureBegin(event:CaptureEvent):void {
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				ExportDialog.show();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleCaptureComplete(event:Event):void {
+				ExportDialog.completeExport(fileModel, swfCaptureUtil.exportedImageNames);
+				stateChange();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleMainNavChange(event:IndexChangeEvent):void {
+				tabViews.selectedIndex = event.newIndex;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleCaptureSwfChange(event:CaptureEvent):void {
+				previewPanel.frameSlider.minimum = 0;
+				previewPanel.frameSlider.maximum = swfCapture.totalFrames;
+				
+				if (!swfCapture.captureBounds.equals(new Rectangle())) {
+					updateUI(swfCapture.captureBounds);
+				} else {
+					CallLater.call(findBounds, 2);
+				}
+				
+				statesDataProvider.removeAll();
+				statesDataProvider.addItem({name:'-- Play All --'});
+				
+				swfCaptureUtil.updateSWF(swfCapture.content, swfCapture.registrationPoint);
+				var states:Vector.<AnimationState> = swfCaptureUtil.getStates();
+				var l:uint = states.length;
+				for (var i:uint=0;i<l;i++) {
+					var state:AnimationState = states[i];
+					statesDataProvider.addItem(state);
+				}
+				
+				previewPanel.stateList.selectedIndex = 0;
+				stateChange();
+			}
+			
+			protected function handleCaptureRegPtChange(event:CaptureEvent):void {
+				var data:Object = event.data;
+				fileModel.selectedItem.displayPt = data.displayPt;
+				fileModel.registrationPt = data.relativePt;
+				
+				swfCaptureUtil.updateRegistrationPoint(data.relativePt);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function findBounds():void {
+				enabled = false;
+				ProgressOverlay.show('Calculating bounds');
+				
+				//We could be in an state preview, so stop that for now (we'll re-enable after the find bounds is complete.
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				var findBounds:FindSWFBounds = new FindSWFBounds(swfCapture.content, fileModel.selectedItem.frameCount);
+				findBounds.addEventListener(Event.COMPLETE, handleFoundBounds);
+				findBounds.findBounds();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleFoundBounds(event:Event):void {
+				enabled = true;
+				
+				var bounds:FindSWFBounds = event.target as FindSWFBounds;
+				bounds.removeEventListener(Event.COMPLETE, handleFoundBounds);
+				ProgressOverlay.hide();
+				
+				updateCapture(bounds.bounds);
+				updateUI(bounds.bounds);
+				
+				//Reset the correct play / pause state
+				playMode = playMode;
+				
+				//Reset the correct state
+				stateChange();
+				
+				//Places registration point
+				if (fileModel.selectedItem.isDirty) {
+					this.swfCapture.findMovieRegPoint();
+					fileModel.selectedItem.isDirty = false;
+				} else {
+					this.swfCapture.topAlignRegPoint();
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleListChange(event:Event):void {
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				
+				var item:SourceFileData = fileModel.selectedItem;
+				
+				if (item == null) {
+					swfCapture.source = null;
+					xValue.value = 0;
+					yValue.value = 0;
+					widthValue.value = 0;
+					heightValue.value = 0;
+					exportPadding.value = 0;
+					numFramesStep.value = 0;
+					threshold.value = 0;
+					sourcePathTxt.text = '';
+					sourceNameTxt.text = '';
+					destinationTxt.text = '';
+					reuseFramesChk.selected = false;
+					
+					dataExportList.selectedIndex = 0;
+					imageExportList.selectedIndex = 0;
+					
+					variableFrameDimensions.selected = false;
+				} else {
+					swfCapture.source = item.sourcePath;
+					exportPadding.value = item.exportPadding;
+					threshold.value = isNaN(item.threshold) ? 0.5 : item.threshold;
+					
+					thresholdLbl.text = String(Math.round(threshold.value*100));
+					reuseFramesChk.selected = item.reuseFrames;
+					variableFrameDimensions.selected = item.variableFrameDimensions;
+					
+					if (exportPadding.value > 1) { swfCapture.padding = exportPadding.value; }
+					
+					sourcePathTxt.text = unescapeMultiByte(item.sourcePath);
+					sourceNameTxt.text = unescapeMultiByte(item.name);
+					destinationTxt.text = unescapeMultiByte(item.destinationPath);
+					showGrid = item.showGrid !== false;
+					
+					previewPanel.selectedColor = item.backgroundColor;
+					previewPanel.updateColorPickerSkin(showGrid);
+					numFramesStep.value = item.frameCount || 0;
+					
+					imageExportList.selectedIndex = getListItemIndexByType(imageExportList.dataProvider as ArrayList, item.imageExportType);
+					dataExportList.selectedIndex = getListItemIndexByType(dataExportList.dataProvider as ArrayList, item.dataExportType);
+					
+					var bitmapWidth:Number = item.bitmapWidth || 0;
+					var bitmapHeight:Number = item.bitmapHeight || 0;
+					
+					changeImageExportType();
+					changeDataExportType();
+					
+					updateUI(item.frameBounds);
+					updateCapture(item.frameBounds);
+					updateViewFromColorChange();
+					
+					updateRegPt();
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function getListItemIndexByType(array:ArrayList, value:String):int {
+				var l:uint = array.length;
+				for (var i:uint=0;i<l;i++) {
+					if (array.getItemAt(i).type == value) {
+						return i;
+					}
+				}
+				return 0;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function findBitmapIndex(value:String):int {
+				var l:uint = imageExportList.dataProvider.length;
+				for (var i:uint=0;i<l;i++) {
+					if (imageExportList.dataProvider.getItemAt(i).type == value) {
+						return i;
+					}
+				}
+				return -1;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updateCapture(bounds:Rectangle):void {
+				if (bounds == null) { return; }
+				
+				swfCapture.captureBounds = bounds;
+				
+				xValue.value = bounds.x;
+				yValue.value = bounds.y;
+				widthValue.value = bounds.width;
+				heightValue.value = bounds.height;
+				
+				fileModel.setSelectedBounds(xValue.value, yValue.value, widthValue.value, heightValue.value, fileModel.selectedItem.exportPadding);
+				fileModel.setSelectedBitmapSize(fileModel.selectedItem.bitmapWidth, fileModel.selectedItem.bitmapHeight);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handlePositionChange():void {
+				var bounds:Rectangle = new Rectangle(xValue.value, yValue.value, widthValue.value, heightValue.value);
+				updateCapture(bounds);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updateUI(bounds:Rectangle):void {
+				if (bounds == null) { return; }
+				
+				xValue.value = bounds.x;
+				yValue.value = bounds.y;
+				widthValue.value = bounds.width;
+				heightValue.value = bounds.height;
+				
+				var padding:uint = 0;
+				if (fileModel.selectedItem && fileModel.selectedItem.frameBounds) {
+					padding = fileModel.selectedItem.exportPadding || 0;
+				}
+				
+				swfCapture.padding = padding;
+				fileModel.setSelectedBounds(xValue.value, yValue.value, widthValue.value, heightValue.value, padding);
+				
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleBrowseClick():void {
+				swfFile = new File();
+				swfFile.addEventListener(Event.SELECT, handleFileSelect);
+				swfFile.browseForOpen('Find SWF file', [new FileFilter('SWF File', '*.swf')]);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleFileSelect(event:Event):void {
+				swfCapture.source = swfFile.url;
+				fileModel.addItem(swfFile);
+				playMode = PLAY;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleUpdateSourceClick():void {
+				swfFile = new File();
+				swfFile.addEventListener(Event.SELECT, handleSourceFileSelect);
+				swfFile.browseForOpen('Find SWF file', [new FileFilter('SWF File', '*.swf')]);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSourceFileSelect(event:Event):void {
+				swfCapture.source = swfFile.url;
+				fileModel.updateSelectedSourceFile(swfFile);
+				playMode = PLAY;
+				handleListChange(null);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSwfChange():void {
+				previewPanel.frameSlider.maximum = swfCapture.totalFrames;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updateSliderPosition():void {
+				previewPanel.frameSlider.value = Math.min(Number(previewPanel.frameNumDisplay.text), swfCapture.totalFrames);
+				previewPanel.frameNumDisplay.text = previewPanel.frameSlider.value+''; 
+				updatePreviewFramePosition();
+			}
+			
+			protected function handlePreviewFramePosition(event:PreviewPanelEvent):void {
+				updatePreviewFramePosition();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updatePreviewFramePosition():void {
+				previewPanel.totalFrames = (swfCapture != null?swfCapture.totalFrames:0)
+				swfCapture.gotoAndStop(previewPanel.frameSlider.value);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function tick(e:Event):void {
+				if (playMode == PLAY) {
+					var frameNum:int = swfCapture.currentFrame;
+					previewPanel.frameSlider.value = frameNum;
+					previewPanel.frameNumDisplay.text = frameNum+'';
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSliderStartChange(event:PreviewPanelEvent):void {
+				lastPlayMode = playMode;
+				playMode = PAUSE;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSliderEndChange(event:PreviewPanelEvent):void {
+				playMode = lastPlayMode;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function set playMode(value:uint):void {
+				_playMode = value;
+				previewPanel.playPauseBtn.selected = value == PLAY;
+				
+				if (playMode == PLAY && swfCapture) {
+					swfCapture.play();
+				} else if (swfCapture) {
+					swfCapture.stop();
+				}
+				
+				updateLiveBoundsUpdate();
+			}
+			
+			protected function updateLiveBoundsUpdate():void {
+				if (_playMode == PLAY && swfCapture && this.variableFrameDimensions.selected) {
+					this.addEventListener(Event.ENTER_FRAME, updatePrevewBounds, false, 0, true);
+					swfCapture.mouseEnabled = false;
+				} else if (!this.variableFrameDimensions.selected) {
+					this.removeEventListener(Event.ENTER_FRAME, updatePrevewBounds);
+					updateUI((fileModel.selectedItem as SourceFileData).frameBounds);
+					updateCapture((fileModel.selectedItem as SourceFileData).frameBounds);
+					swfCapture.mouseEnabled = true;
+				}
+			}
+			
+			protected function updatePrevewBounds(event:Event):void {
+				var bounds:Rectangle = swfCaptureUtil.getCurrentFrameBounds();
+				swfCapture.captureBounds = bounds;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function get playMode():uint {
+				return _playMode;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function togglePlayClick(event:PreviewPanelEvent):void {
+				playMode = previewPanel.playPauseBtn.selected?PLAY:PAUSE;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function refreshSWF():void {
+				swfCapture.refresh();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function get captureBounds():Rectangle {
+				var captureBounds:Rectangle;
+				var bounds:Object = fileModel.selectedItem.frameBounds;
+				if (bounds && fileModel.selectedItem.exportPadding > 0) {
+					captureBounds = new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height);
+					captureBounds.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
+				}
+				return captureBounds;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function deleteAnimation():void {
+				fileModel.deleteSelected();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleFrameRateChange(event:PreviewPanelEvent):void {
+				stage.frameRate = previewPanel.frameRate;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			
+			protected function handleBgColorChange(event:PreviewPanelEvent):void {
+				var alphaBtn:ToggleButton = ColorPreviewText.getInstance().toggleTransparencyButton;
+				alphaBtn.selected = false;
+				showGrid = false;
+				previewPanel.updateColorPickerSkin(showGrid);
+				updateViewFromColorChange();
+			}
+			
+			/**
+			 * @private
+			 * Ensures that when ColorPicker is moused over cursor will be set to arrow.
+			 */
+			protected function handleColorPickerMove(event:PreviewPanelEvent):void {
+				if (Mouse.cursor != MouseCursor.AUTO) {
+					Mouse.cursor = MouseCursor.AUTO;
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleColorTransprencyChange(event:MouseEvent):void {
+				showGrid = event.target.selected;
+				previewPanel.updateColorPickerSkin(showGrid);
+				updateViewFromColorChange();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function updateViewFromColorChange():void {
+				swfCapture.setBackgroundColor(showGrid, previewPanel.selectedColor);
+				fileModel.setSelectedColor(showGrid, previewPanel.selectedColor);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleToleranceChange():void {
+				swfCaptureUtil.threshold = threshold.value;
+				fileModel.setSelectedThreshold(threshold.value);
+				this.thresholdLbl.text = String(Math.round(threshold.value * 100)); 
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function changeImageExportType():void {
+				var w:Number; 
+				var h:Number;
+				
+				var option:String = imageExportList.selectedItem.type;
+				h = w = imageExportList.selectedItem.size;
+				
+				fileModel.setSelectedBitmapSize(w, h);
+				fileModel.selectedItem.imageExportType = option;
+			}
+			
+			protected function changeDataExportType():void {
+				var option:String = dataExportList.selectedItem.type;
+				fileModel.selectedItem.dataExportType = option;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleNumFramesStepChange():void {
+				fileModel.selectedFrameCount = numFramesStep.value;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function showEasel():void {
+				navigateToURL(new URLRequest('http://www.easeljs.com'));
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function formatStateLabel(value:Object):String {
+				return value == null?'':value.name;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			
+			protected function stateChange():void {
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				playMode = PLAY;
+			}
+			
+			protected function handleStateChange(event:PreviewPanelEvent):void {
+				stateChange();
+				
+				if (swfCapture.content == null) { return; }
+				
+				if (previewPanel.stateList.selectedItem is AnimationState) {
+					selectedState = previewPanel.stateList.selectedItem;
+					if (selectedState.startFrame != selectedState.endFrame && selectedState.startFrame+1 != selectedState.endFrame) {
+						swfCapture.content.gotoAndPlay(selectedState.startFrame+1);
+						addEventListener(Event.ENTER_FRAME, watchStatePlaying);
+					} else {
+						swfCapture.content.gotoAndStop(selectedState.startFrame==1?0:selectedState.startFrame+1);
+						playMode = PAUSE;
+					}
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function watchStatePlaying(event:Event):void {
+				if (swfCapture.content.currentFrame == selectedState.endFrame+1) {
+					swfCapture.content.gotoAndPlay(selectedState.startFrame+1);
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function export():void {
+				var selectedFile:SourceFileData = fileModel.selectedItem;
+				
+				if (selectedFile.imageExportType == ExportType.NONE && selectedFile.dataExportType == ExportType.NONE) {
+					var alert:Alert = Alert.show('There is nothing to export.', 'Error', Alert.OK, FlexGlobals.topLevelApplication as Sprite, handleConfirmNoExport);
+					alert.validateNow();
+					return;
+				}
+				
+				var bounds:Rectangle = fileModel.swfCapture.captureBounds.clone();
+				bounds.inflate(exportPadding.value, exportPadding.value);
+				swfCaptureUtil.threshold = threshold.value;
+				swfCaptureUtil.capture();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleConfirmNoExport(event:Event):void {
+				mainMenu.selectedIndex = 3;
+				tabViews.selectedIndex = 3;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleExportPaddingChange():void {
+				var bounds:Rectangle = fileModel.swfCapture.captureBounds;
+				createBoundPreview(bounds);
+				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, exportPadding.value);
+			}
+			
+			protected function createBoundPreview(bounds:Rectangle):void {
+				swfCapture.padding = exportPadding.value;
+				swfCapture.updatePadding();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleBackgroundColorOpen(event:PreviewPanelEvent):void {
+				var alphaBtn:ToggleButton = ColorPreviewText.getInstance().toggleTransparencyButton;
+				alphaBtn.selected = fileModel.selectedItem.showGrid;
+				alphaBtn.addEventListener(MouseEvent.CLICK, handleColorTransprencyChange, false, 0,true);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleSourceNameChange():void {
+				fileModel.selectedName = sourceNameTxt.text;
+				fileList.labelDisplay.text = sourceNameTxt.text;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function findDestination():void {
+				var file:File = new File(destinationTxt.text == ''?null:destinationTxt.text);
+				file.addEventListener(Event.SELECT, handleFoundDestination, false, 0, true);
+				file.browseForDirectory('Browse for destination');
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleFoundDestination(event:Event):void {
+				var file:File = event.target as File;
+				file.removeEventListener(Event.SELECT, handleFoundDestination);
+				
+				if (file.url == null) { return; }
+				
+				fileModel.selectedDestinationPath = file.url;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleExportFormatChange(event:Event):void {
+				var value:Boolean;
+				if (event.target is DropDownList) {
+					var option:String = ((event.target as DropDownList).selectedItem).type;
+				} else {
+					value = (event.target as CheckBox).selected;
+				}
+				
+				switch (event.target) {
+					case variableFrameDimensions:
+						fileModel.selectedItem.variableFrameDimensions = value;
+						updateLiveBoundsUpdate();
+						break;
+					case reuseFramesChk:
+						fileModel.selectedItem.reuseFrames = value; 
+						swfCaptureUtil.threshold = (value) ? threshold.value : 0;
+						break;
+					case dataExportList:
+						fileModel.selectedItem.dataExportType = option;
+						break;
+					case imageExportList:
+						fileModel.selectedItem.imageExportType = option;
+						break;
+				}
+				
+				fileModel.saveState();
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function formatFileListLabel(item:SourceFileData):String {
+				return unescapeMultiByte(item.name);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleToleranceEnter():void {
+				var value:Number  = Number(this.thresholdLbl.text);
+				if (value > 100) {
+					value = 100;
+				} 
+				this.threshold.value = value/100;
+				this.thresholdLbl.text = String(Math.round(this.threshold.value*100));
+				
+				fileModel.setSelectedThreshold(threshold.value);
+				
+				swfCaptureUtil.threshold = threshold.value; 
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function formatToleranceLbl(value:String):String {
+				return 'Threshold ' + Math.round(Number(value)*100) + ' of ' + 100;
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<!-- File controls -->
+	<s:SkinnableContainer width="100%" backgroundColor="0xffffff" mouseEnabled="false">
+		<s:layout>
+			<s:HorizontalLayout verticalAlign="top" />
+		</s:layout>
+		<s:HGroup verticalAlign="bottom">
+			<s:Label id="appTitle" text="Zoë" styleName="appTitleLarge" paddingRight="0" paddingBottom="-3"/>
+			<s:Label id="appSubTitle" text="by gskinner.com" styleName="appTitleSmall"/>
+		</s:HGroup>
+		<s:HGroup verticalAlign="bottom" width="100%">
+			<s:DropDownList id="fileList" labelFunction="formatFileListLabel" prompt="Browse for a swf file or drag files onto the application." height="18" width="100%" />
+			<s:Button id="addFileBtn" styleName="addFileButton" click="handleBrowseClick()" />
+			<s:Button id="deleteButton" styleName="deleteButton" click="deleteAnimation()" />
+			<s:Button id="refreshBtn" styleName="refreshButton" click="refreshSWF()" />
+		</s:HGroup>
+		<s:Button id="exportBtn" styleName="exportButton" label="Export" enabled="{fileList.selectedIndex != -1}" click="export()" />
+	</s:SkinnableContainer>
+	
+	<controls:Menu id="mainMenu" tabChildren="false" tabEnabled="false" />
+	
+	<mx:ViewStack id="tabViews" creationPolicy="all" height="50" width="100%" backgroundColor="0xffffff">
+		
+		<!-- Basic View -->
+		<s:NavigatorContent width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
+			<s:layout>
+				<s:VerticalLayout />
+			</s:layout>
+			<s:HGroup>
+				<s:RichText text="Name" styleName="contentText" width="{browseForFolderBtn.x+browseForFolderBtn.width}" />
+				<s:RichText text="Source" styleName="contentText" width="{browseForDestinationBtn.width + sourcePathTxt.width+5}" />
+				<s:RichText text="Output" styleName="contentText" />
+			</s:HGroup>
+			<s:HGroup width="100%" height="100%" verticalAlign="middle">
+				<s:TextInput id="sourceNameTxt" width="33%" change="handleSourceNameChange()" />
+				<s:Button id="browseForFolderBtn" styleName="folderButton" click="handleUpdateSourceClick();" />
+				<s:TextInput id="sourcePathTxt" width="33%" editable="false" />
+				<s:Button id="browseForDestinationBtn" styleName="folderButton" click="findDestination();" />
+				<s:TextInput id="destinationTxt" fontFamily="_sans" width="33%" editable="false" />
+			</s:HGroup>
+		</s:NavigatorContent>
+		
+		<!-- Bounds View -->
+		<s:NavigatorContent id="boundsView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
+			<s:layout>
+				<s:VerticalLayout />
+			</s:layout>
+			
+			<s:HGroup id="boundsLabelView" gap="10" width="100%">
+				<s:RichText text="x" width="50" styleName="contentText" includeInLayout="false" visible="false" />
+				<s:RichText text="y" width="70" styleName="contentText" includeInLayout="false" visible="false" />
+				<s:RichText text="width" width="50" styleName="contentText"  includeInLayout="false" visible="false"/>
+				<s:RichText text="height" width="70" styleName="contentText" includeInLayout="false" visible="false" />
+				<s:RichText text="Image Bounds" styleName="contentText" />
+				<mx:Spacer width="203" />
+				<s:RichText text="Reuse Frames" width="100" styleName="contentText" />
+			</s:HGroup>
+			
+			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
+				<s:NumericStepper id="xValue" minimum="0" maximum="1500"  width="50" stepSize="1" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" /> 
+				<s:NumericStepper id="yValue" minimum="0" maximum="1500"  stepSize="1"  width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
+				
+				<s:NumericStepper id="widthValue" value="75" minimum="5" maximum="1500" stepSize="1" width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
+				<s:NumericStepper id="heightValue" value="75" minimum="5" maximum="1500" stepSize="1" width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
+				
+				<s:NumericStepper id="exportPadding" width="40" height="20" minimum="0" maximum="99" stepSize="1"  change="handleExportPaddingChange()" />
+				<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:CheckBox id="variableFrameDimensions" label="Variable Frame" change="handleExportFormatChange(event)"/>
+				<s:Button id="variableFrameDimensionsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:Button label="Calculate Bounds" styleName="simpleButton" enabled="{!variableFrameDimensions.selected}"  click="findBounds()" />
+				
+				<mx:Spacer width="10" />
+				<s:CheckBox id="reuseFramesChk" label="" change="handleExportFormatChange(event)"/>
+				<s:HGroup paddingLeft="-5" paddingTop="5" width="100%">
+					<s:HSlider id="threshold" width="100%" dataTipFormatFunction="formatToleranceLbl" enabled="{reuseFramesChk.selected}" change="handleToleranceChange()" maximum="1" minimum="0" stepSize="0.01" value="0.5" />
+					</s:HGroup>
+				<s:TextInput id="thresholdLbl" restrict="[0-9]" width="35" enabled="{threshold.enabled}" enter="handleToleranceEnter()" />
+				<s:Button id="thresholdHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<mx:Spacer width="10" />
+				
+			</s:HGroup>
+		</s:NavigatorContent>
+		
+		<!-- Export View -->
+		<s:NavigatorContent id="exportView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
+			<s:layout>
+				<s:VerticalLayout />
+			</s:layout>
+			<s:HGroup>
+				<s:RichText text="Frame count" styleName="contentText" />
+				<s:RichText text="Export" styleName="contentText" />
+			</s:HGroup>
+			<s:HGroup width="100%" height="100%" verticalAlign="middle">
+				<s:Label text="Export " />
+				<s:NumericStepper id="numFramesStep" width="50" height="20" maximum="999" change="handleNumFramesStepChange()" />
+				<s:Label text="frames" />
+				<s:Button id="numFramesHelp" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:Label text="Image format " verticalAlign="middle" height="18" paddingTop="3" />
+				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
+				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:Label text="Data format " verticalAlign="middle" height="18" paddingTop="3" />
+				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
+				<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+			</s:HGroup>
+		</s:NavigatorContent>
+	</mx:ViewStack>
+	
+	<ui:Divider width="100%" height="2" color="0x666666" />
+	
+	<!-- Displays the loaded swf -->
+	<views:CapturePreview id="swfCapture" />
+	
+</s:VGroup>

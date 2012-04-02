@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Zoë by gskinner.com.
+Visit www.gskinner.com/blog for documentation, updates and more free code.
+
+Copyright (c) 2010 Grant Skinner
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+-->
+
+<!---
+
+	Zoë (from Zoetrope) is a simple AIR application for OSX or Windows provides an easy way to export swf animations as sprite sheets for use with EaselJS.
+	
+	Simply drag a SWF file onto the application. It will scan the main timeline to find frame labels and dimensions. You can tweak the frame bounds, edit settings, then export a sprite sheet image and EaselJS code defining a SpriteSheet instance with frame data based on the timeline labels.
+	
+	SWFs should have all animation on the main timeline, with frame labels to indicate the start of animations. Nested graphics are fine.
+
+-->
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" showStatusBar="false"
+					   xmlns:s="library://ns.adobe.com/flex/spark" width="675" height="500" applicationComplete="init()"
+					   xmlns:mx="library://ns.adobe.com/flex/mx" skinClass="com.gskinner.skins.ApplicationSkin"
+					   xmlns:views="com.gskinner.zoe.views.*"
+					   nativeDragOver="handleDragOver(event)" nativeDragDrop="handleDragDrop(event)"
+					   >
+	
+	<fx:Script>
+		<![CDATA[
+			import com.chewtinfoil.utils.DateUtils;
+			import com.gskinner.filesystem.Preferences;
+			import com.gskinner.zoe.utils.ApplicationUpdater;
+			
+			import mx.controls.Alert;
+			import mx.controls.ToolTip;
+			import flash.desktop.ClipboardFormats;
+			import flash.filesystem.File;
+			import flash.desktop.NativeDragManager;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function init():void {
+				//Check for new versions, if needed.
+				var lastUpdateTime:Date = Preferences.getPref('lastUpdateCheck') as Date;
+				if (lastUpdateTime == null) {
+					lastUpdateTime = new Date();
+				} else if (DateUtils.addDays(lastUpdateTime, 5).time >= new Date().time) {
+					ApplicationUpdater.checkForUpdates(true);
+					lastUpdateTime = new Date();
+				}
+				
+				Preferences.setPref('lastUpdateCheck', lastUpdateTime, false, true);
+				
+				//Center on screen
+				var s:Screen = Screen.mainScreen;
+				this.nativeWindow.x = (s.bounds.width-width) >> 1;
+				this.nativeWindow.y = (s.bounds.height-height) >> 1;
+				
+				this.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, handleError);
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleError(event:UncaughtErrorEvent):void {
+				event.preventDefault();
+				Alert.show((event.text.length) ? event.text : "An unexpected error has occurred.", "Error");
+			}
+			
+			/**
+			 * @private
+			 * 
+			 * We allow draw and drop of multiple swfs.
+			 */
+			protected function handleDragOver(event:NativeDragEvent):void {
+				if (!event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+					return;
+				}
+				
+				var files:Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+				
+				var l:uint = files.length;
+				var validFiles:uint = 0;
+				for (var i:uint=0;i<l;i++) {
+					var file:File = files[i];
+					if (file.extension == 'swf') {
+						validFiles++; break;
+					}
+				}
+				
+				if (validFiles > 0) {
+					NativeDragManager.acceptDragDrop(this);
+				}
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleDragDrop(event:NativeDragEvent):void {
+				var files:Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+				var l:uint = files.length;
+				
+				var swfs:Array = [];
+				for (var i:uint=0;i<l;i++) {
+					var file:File = files[i];
+					if (file.extension == 'swf') {
+						swfs.push(file);
+					}
+				}
+
+				swfCapture.loadSwfs(swfs);
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Style source="com/gskinner/zoe/styles/styles.css" />
+	
+	<s:layout>
+		<s:VerticalLayout paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10" />
+	</s:layout>
+	
+	<s:SkinnableContainer width="100%" height="100%" backgroundColor="0xffffff">
+		<views:Main id="swfCapture" width="100%" height="100%" paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10" />
+	</s:SkinnableContainer>
+	
+</s:WindowedApplication>

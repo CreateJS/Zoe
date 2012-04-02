@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Zoë by gskinner.com.
+Visit www.gskinner.com/blog for documentation, updates and more free code.
+
+Copyright (c) 2010 Grant Skinner
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+-->
+
+<!---
+
+Displays a progress bar to the user while the application finds the loaded animations bounds.
+
+-->
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="100%" height="100%" horizontalAlign="right" verticalAlign="bottom"
+		 >
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.core.FlexGlobals;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.Application;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected static const MIN_OPEN_TIME:Number = 1000*2;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected static var _instance:ProgressOverlay;
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected static var openTime:uint;
+			
+			/**
+			 * Sets the label.
+			 * 
+			 */
+			public function set label(value:String):void {
+				bar.label = value;
+			}
+			
+			/**
+			 * Displays this overlay, and modals out the ui.
+			 * 
+			 */
+			public static  function show(label:String):void {
+				var _instance:ProgressOverlay = getInstance();
+				_instance.bar.label = label;
+				_instance.bar.validateNow();
+				
+				openTime = getTimer();
+				
+				var app:Application = FlexGlobals.topLevelApplication as Application;
+				PopUpManager.addPopUp(_instance, app, true);
+				_instance.x = 20;
+				_instance.y = app.height-40;
+			}
+			
+			/**
+			 * Hides this overlay.
+			 * 
+			 */
+			public static  function hide():void {
+				var now:uint = getTimer();
+				if (now < openTime + MIN_OPEN_TIME) {
+					setTimeout(PopUpManager.removePopUp, (openTime + MIN_OPEN_TIME)-now, getInstance()); 
+					return;
+				}
+				
+				PopUpManager.removePopUp(getInstance());
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected static function getInstance():ProgressOverlay {
+				if (_instance == null) { _instance = new ProgressOverlay(); }
+				
+				return _instance;
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<mx:ProgressBar id="bar" labelPlacement="left" indeterminate="true" />
+	
+</s:VGroup>
