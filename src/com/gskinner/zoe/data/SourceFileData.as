@@ -75,6 +75,11 @@ package com.gskinner.zoe.data {
 		public var exportPadding:Number;
 		
 		/**
+		 *  The scale of the clip.
+		 */
+		public var scale:Number;
+		
+		/**
 		 * The absolute URI to the swf
 		 */
 		public var sourcePath:String;
@@ -140,6 +145,7 @@ package com.gskinner.zoe.data {
 			showGrid = true;
 			exportPadding = 0;
 			frameCount = 0;
+			scale = 1;
 		}
 		
 		/**
@@ -177,6 +183,7 @@ package com.gskinner.zoe.data {
 				showGrid:showGrid,
 				frameBounds:{x:frameBounds.x, y:frameBounds.y, width:frameBounds.width, height:frameBounds.height},
 				exportPadding:exportPadding,
+				scale:scale,
 				destinationPath:destinationPath,
 				sourcePath:sourcePath,
 				name:name,
@@ -205,7 +212,7 @@ package com.gskinner.zoe.data {
 			bitmapHeight = value.bitmapHeight;
 			backgroundColor = value.backgroundColor;
 			showGrid = value.showGrid;
-			frameBounds = new Rectangle(value.frameBounds.x,value.frameBounds.y,value.frameBounds.width,value.frameBounds.height);
+			frameBounds = new Rectangle(value.frameBounds.x||0, value.frameBounds.y||0, value.frameBounds.width||0, value.frameBounds.height||0);
 			exportPadding = value.exportPadding;
 			destinationPath = value.destinationPath;
 			sourcePath = value.sourcePath;
@@ -219,6 +226,7 @@ package com.gskinner.zoe.data {
 			reuseFrames = value.reuseFrames;
 			dataExportType = value.dataExportType || ExportType.DATA_JSON;
 			imageExportType = value.imageExportType || ExportType.IMAGE_SPRITE_SHEET;
+			scale = value.scale || 1;
 		}
 	}
 }

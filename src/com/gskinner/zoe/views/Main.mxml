@@ -137,6 +137,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			public function loadSwfs(files:Array):void {
+				this.removeEventListener(Event.ENTER_FRAME, updatePreviewBounds);
 				
 				var l:uint = files.length;
 				for (var i:uint=0;i<l;i++) {
@@ -199,6 +200,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				exportBtn.toolTip = "Exports your animation to disk.";
 				deleteButton.toolTip = "Deletes the current item from the list, local files are not modified.";
 				exportPaddingHelpBtn.toolTip = "There is no visual preview for padding. It's applied to each frame during export.";
+				scaleHelpBtn.toolTip = "Scale the spritesheet for export."
 				thresholdHelpBtn.toolTip = "Adjusting the scaling magnitude or intensity in which frames are to be compared for export.";
 				variableFrameDimensionsHelpBtn.toolTip = "Performs rectangle packing optimizing sizing for sprites.";
 				statesDataProvider = new ArrayList();
@@ -338,7 +340,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				//We could be in an state preview, so stop that for now (we'll re-enable after the find bounds is complete.
 				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
-				var findBounds:FindSWFBounds = new FindSWFBounds(swfCapture.content, fileModel.selectedItem.frameCount);
+				var findBounds:FindSWFBounds = new FindSWFBounds(swfCapture.content, fileModel.selectedItem.frameCount, swfCapture.scale);
 				findBounds.addEventListener(Event.COMPLETE, handleFoundBounds);
 				findBounds.findBounds();
 			}
@@ -354,8 +356,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				bounds.removeEventListener(Event.COMPLETE, handleFoundBounds);
 				ProgressOverlay.hide();
 				
-				updateCapture(bounds.bounds);
-				updateUI(bounds.bounds);
+				var newBounds:Rectangle = bounds.bounds;
+				multiplyBounds(newBounds, swfCapture.scale);
+				updateCapture(newBounds);
+				updateUI(newBounds);
 				
 				//Reset the correct play / pause state
 				playMode = playMode;
@@ -364,12 +368,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				stateChange();
 				
 				//Places registration point
-				if (fileModel.selectedItem.isDirty) {
-					this.swfCapture.findMovieRegPoint();
-					fileModel.selectedItem.isDirty = false;
-				} else {
-					this.swfCapture.topAlignRegPoint();
-				}
+				updateRegPoint();
 			}
 			
 			/**
@@ -394,6 +393,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					sourceNameTxt.text = '';
 					destinationTxt.text = '';
 					reuseFramesChk.selected = false;
+					swfCapture.scale = 1;
 					
 					dataExportList.selectedIndex = 0;
 					imageExportList.selectedIndex = 0;
@@ -409,6 +409,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					variableFrameDimensions.selected = item.variableFrameDimensions;
 					
 					if (exportPadding.value > 1) { swfCapture.padding = exportPadding.value; }
+					swfCapture.scale = item.scale;
 					
 					sourcePathTxt.text = unescapeMultiByte(item.sourcePath);
 					sourceNameTxt.text = unescapeMultiByte(item.name);
@@ -428,8 +429,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 					changeImageExportType();
 					changeDataExportType();
 					
-					updateUI(item.frameBounds);
 					updateCapture(item.frameBounds);
+					updateUI(swfCapture.captureBounds);
 					updateViewFromColorChange();
 					
 					updateRegPt();
@@ -468,9 +469,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function updateCapture(bounds:Rectangle):void {
+			protected function updateCapture(bounds:Rectangle=null):void {
 				if (bounds == null) { return; }
-				
 				swfCapture.captureBounds = bounds;
 				
 				xValue.value = bounds.x;
@@ -507,6 +507,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (fileModel.selectedItem && fileModel.selectedItem.frameBounds) {
 					padding = fileModel.selectedItem.exportPadding || 0;
 				}
+				scaleValue.value = fileModel.selectedItem.scale;
 				
 				swfCapture.padding = padding;
 				fileModel.setSelectedBounds(xValue.value, yValue.value, widthValue.value, heightValue.value, padding);
@@ -632,19 +633,21 @@ OTHER DEALINGS IN THE SOFTWARE.
 			}
 			
 			protected function updateLiveBoundsUpdate():void {
+				if (fileModel.selectedItem == null) { return; }
 				if (_playMode == PLAY && swfCapture && this.variableFrameDimensions.selected) {
-					this.addEventListener(Event.ENTER_FRAME, updatePrevewBounds, false, 0, true);
+					this.addEventListener(Event.ENTER_FRAME, updatePreviewBounds, false, 0, true);
 					swfCapture.mouseEnabled = false;
 				} else if (!this.variableFrameDimensions.selected) {
-					this.removeEventListener(Event.ENTER_FRAME, updatePrevewBounds);
-					updateUI((fileModel.selectedItem as SourceFileData).frameBounds);
+					this.removeEventListener(Event.ENTER_FRAME, updatePreviewBounds);
 					updateCapture((fileModel.selectedItem as SourceFileData).frameBounds);
+					updateUI(swfCapture.captureBounds);
 					swfCapture.mouseEnabled = true;
 				}
 			}
 			
-			protected function updatePrevewBounds(event:Event):void {
+			protected function updatePreviewBounds(event:Event):void {
 				var bounds:Rectangle = swfCaptureUtil.getCurrentFrameBounds();
+				multiplyBounds(bounds, swfCapture.scale);
 				swfCapture.captureBounds = bounds;
 			}
 			
@@ -848,7 +851,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					return;
 				}
 				
-				var bounds:Rectangle = fileModel.swfCapture.captureBounds.clone();
+				var bounds:Rectangle = swfCapture.captureBounds;
 				bounds.inflate(exportPadding.value, exportPadding.value);
 				swfCaptureUtil.threshold = threshold.value;
 				swfCaptureUtil.capture();
@@ -869,6 +872,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function handleExportPaddingChange():void {
 				var bounds:Rectangle = fileModel.swfCapture.captureBounds;
+				createBoundPreview(bounds);
+				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, exportPadding.value);
+			}
+			
+			protected function handleScaleChange():void {
+				var bounds:Rectangle;
+				if (!variableFrameDimensions.selected) {
+					bounds = swfCapture.captureBounds;
+					multiplyBounds(bounds, 1/swfCapture.scale); // Normalize
+					multiplyBounds(bounds, scaleValue.value);
+					swfCapture.captureBounds = bounds;
+					updateRegPoint();
+				}
+				swfCapture.scale = scaleValue.value;
+				
+				fileModel.setSelectedScale(scaleValue.value);
+				
+				bounds = swfCapture.captureBounds;
 				createBoundPreview(bounds);
 				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, exportPadding.value);
 			}
@@ -985,6 +1006,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 				return 'Threshold ' + Math.round(Number(value)*100) + ' of ' + 100;
 			}
 			
+			private function multiplyBounds(bounds:Rectangle, scale:Number):void {
+				bounds.x *= scale;
+				bounds.y *= scale;
+				bounds.width *= scale;
+				bounds.height *= scale;
+			}
+			
+			protected function updateRegPoint():void {
+				if (fileModel.selectedItem.isDirty) {
+					swfCapture.findMovieRegPoint();
+					fileModel.selectedItem.isDirty = false;
+				} else {
+					swfCapture.topAlignRegPoint();
+				}
+			}
+			
 		]]>
 	</fx:Script>
 	
@@ -1041,7 +1078,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:RichText text="width" width="50" styleName="contentText"  includeInLayout="false" visible="false"/>
 				<s:RichText text="height" width="70" styleName="contentText" includeInLayout="false" visible="false" />
 				<s:RichText text="Image Bounds" styleName="contentText" />
-				<mx:Spacer width="203" />
+				<mx:Spacer width="311" />
 				<s:RichText text="Reuse Frames" width="100" styleName="contentText" />
 			</s:HGroup>
 			
@@ -1054,6 +1091,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				<s:NumericStepper id="exportPadding" width="40" height="20" minimum="0" maximum="99" stepSize="1"  change="handleExportPaddingChange()" />
 				<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:NumericStepper id="scaleValue" width="55" height="20" minimum="0.25" maximum="10" value="1" stepSize="0.25" change="handleScaleChange()" />
+				<s:Button id="scaleHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
 				<s:CheckBox id="variableFrameDimensions" label="Variable Frame" change="handleExportFormatChange(event)"/>
 				<s:Button id="variableFrameDimensionsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
@@ -1078,6 +1118,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			</s:layout>
 			<s:HGroup>
 				<s:RichText text="Frame count" styleName="contentText" />
+				<s:Spacer width="67" />
 				<s:RichText text="Export" styleName="contentText" />
 			</s:HGroup>
 			<s:HGroup width="100%" height="100%" verticalAlign="middle">

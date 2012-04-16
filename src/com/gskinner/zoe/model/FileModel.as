@@ -225,7 +225,11 @@ package com.gskinner.zoe.model {
 		public function setSelectedBounds(x:Number, y:Number, width:Number, height:Number, padding:Number = 0):void {
 			selectedItem.exportPadding = padding;
 			selectedItem.frameBounds = new Rectangle(x,y,width,height);
-			
+			CallLater.call(saveState, 2);
+		}
+		
+		public function setSelectedScale(scale:Number):void {
+			selectedItem.scale = scale;
 			CallLater.call(saveState, 2);
 		}
 		
@@ -250,7 +254,6 @@ package com.gskinner.zoe.model {
 			var arr:Array = [];
 			var l:uint = _dp.source.length;
 			for (var i:uint=0;i<l;i++) {
-				
 				arr.push((_dp.source[i] as SourceFileData).serialize());
 			}
 			
@@ -264,6 +267,8 @@ package com.gskinner.zoe.model {
 		public function addItem(file:File):void {
 			var currentIndex:int = indexOfItem(file);
 			if (currentIndex > -1) {
+				(_dp.getItemAt(currentIndex) as SourceFileData).frameBounds = new Rectangle();
+				(_dp.getItemAt(currentIndex) as SourceFileData).exportPadding = 0;
 				_target.selectedIndex = currentIndex;
 			} else {
 				_dp.addItem(fileToData(file));

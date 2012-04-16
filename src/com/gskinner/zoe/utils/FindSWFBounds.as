@@ -28,6 +28,7 @@
 
 package com.gskinner.zoe.utils {
 	
+	import flash.display.Bitmap;
 	import flash.display.BitmapData;
 	import flash.display.MovieClip;
 	import flash.display.Stage;
@@ -36,6 +37,8 @@ package com.gskinner.zoe.utils {
 	import flash.events.EventDispatcher;
 	import flash.geom.ColorTransform;
 	import flash.geom.Rectangle;
+	
+	import mx.core.FlexGlobals;
 	
 	/**
 	 * To accommodate nested animations, we can't relay on .getBounds();
@@ -89,6 +92,7 @@ package com.gskinner.zoe.utils {
 		 * @private
 		 */
 		protected var stage:Stage;
+		protected var scale:Number = 1;
 		
 		/**
 		 * Creates a new FindSWFBouds object
@@ -96,9 +100,10 @@ package com.gskinner.zoe.utils {
 		 * @param frameCount If this is a programmatic animation or one frame animation, set the number of frames to capture.
 		 * 
 		 */
-		public function FindSWFBounds(swf:MovieClip, frameCount:uint) {
+		public function FindSWFBounds(swf:MovieClip, frameCount:uint, scale:Number) {
 			this.swf = swf;
 			this._frameCount = isNaN(frameCount) || frameCount==0?swf.totalFrames:frameCount;
+			this.scale = scale;
 		}
 		
 		/**
@@ -106,7 +111,9 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		public function findBounds():void {
-			var bounds:Rectangle = swf.getBounds(swf);
+			swf.removeEventListener(Event.ENTER_FRAME, handleFindBounds);
+			
+			var bounds:Rectangle;
 			
 			if (stage == null) {
 				stage = swf.stage;

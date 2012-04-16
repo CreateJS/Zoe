@@ -194,6 +194,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			public var isDown:Boolean = false;
 			
+			private var _scale:Number = 1;
+			
 			protected function init():void {
 				alphaGridBitmap = (new alphaGrid() as FlexBitmap).bitmapData;
 				
@@ -280,6 +282,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				swfLoader.loaderContext = new LoaderContext(false);
 				swfLoader.loaderContext.allowCodeImport = true;
 				
+				scale = 1;
+				
 				if (url) {
 					var file:File = new File(url);
 					
@@ -301,6 +305,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 					_captureBounds = null;
 					updateView();
 					swfLoader.unloadAndStop();
+				}
+			}
+			
+			public function get scale():Number { return _scale; }
+			public function set scale(value:Number):void {
+				_scale = value;
+				if (swfLoader != null) {
+					swfLoader.scaleX = swfLoader.scaleY = value;
 				}
 			}
 			
@@ -430,7 +442,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			public function topAlignRegPoint():void {
-				var rect:Rectangle = (dlContainer.visible) ? this.dlContainer.getBounds(this) : new Rectangle(_captureBounds.x-1, _captureBounds.y-1, _captureBounds.width, _captureBounds.height);
+				var rect:Rectangle = (dlContainer.visible) 
+					? this.dlContainer.getBounds(this) 
+					: new Rectangle(_captureBounds.x-1, _captureBounds.y-1, _captureBounds.width, _captureBounds.height);
 				var pt:Point = new Point(rect.x, rect.y);
 				regPtClipContainer.x = pt.x;
 				regPtClipContainer.y = pt.y;
@@ -476,7 +490,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					g.beginFill(0xffffff, .2);
 					
 					g.lineStyle(1, 0x0, mouseEnabled ? 1 : 0.6, true);
-					var displayBounds:Rectangle = _captureBounds.clone();
+					var displayBounds:Rectangle = captureBounds.clone();
 					displayBounds.inflate(1, 1); //Inflate by 1 so animation is within the preview.
 					g.drawRect(displayBounds.x, displayBounds.y, displayBounds.width, displayBounds.height);
 				}
@@ -608,7 +622,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function handleMosueUp():void {
+			protected function handleMouseUp():void {
 				removeEventListener(MouseEvent.MOUSE_MOVE, handleMoveTransform);
 			}
 			
@@ -881,7 +895,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 		]]>
 	</fx:Script>
 	
-	<mx:Canvas id="background" width="100%" height="100%"  mouseMove="handleMouseMove()" mouseDown="handleMouseDown()" mouseUp="handleMosueUp()" />
+	<mx:Canvas id="background" width="100%" height="100%"  mouseMove="handleMouseMove()" mouseDown="handleMouseDown()" mouseUp="handleMouseUp()" />
 	<mx:SWFLoader id="swfLoader" securityError="handleError()" ioError="handleError()" mouseChildren="false" mouseEnabled="false" init="handleSwfLoad()" scaleContent="false" />
 	
 </s:SkinnableContainer>

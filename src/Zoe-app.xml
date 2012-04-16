@@ -3,7 +3,7 @@
 	<id>Zoe</id>
 	<filename>Zoe</filename>
 	<name>Zoë</name>
-	<versionNumber>1.6.0</versionNumber>
+	<versionNumber>0.2.0</versionNumber>
 	
 	<initialWindow>
 		<content>[This value will be overwritten by Flash Builder in the output app.xml]</content>
@@ -12,6 +12,7 @@
 	    <fullScreen>false</fullScreen>
 	    <visible>true</visible>
   </initialWindow>
+  
 	<icon>
 		<image16x16>icons/16x16.png</image16x16>
 		<image32x32>icons/32x32.png</image32x32>

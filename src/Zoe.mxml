@@ -49,11 +49,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 			import com.gskinner.filesystem.Preferences;
 			import com.gskinner.zoe.utils.ApplicationUpdater;
 			
+			import flash.desktop.ClipboardFormats;
+			import flash.desktop.NativeDragManager;
+			import flash.filesystem.File;
+			
 			import mx.controls.Alert;
 			import mx.controls.ToolTip;
-			import flash.desktop.ClipboardFormats;
-			import flash.filesystem.File;
-			import flash.desktop.NativeDragManager;
 			
 			/**
 			 * @private
@@ -129,7 +130,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 						swfs.push(file);
 					}
 				}
-
+				
 				swfCapture.loadSwfs(swfs);
 			}
 			

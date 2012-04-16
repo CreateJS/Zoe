@@ -26,7 +26,6 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
 package com.gskinner.zoe.utils {
 	
 	import com.adobe.images.PNGEncoder;
@@ -270,7 +269,7 @@ package com.gskinner.zoe.utils {
 			}
 		}
 		
-		public function createSizeBitmap(stage):void {
+		public function createSizeBitmap(stage:Stage):void {
 			findBoundsBmpd = new BitmapData(stage.width, stage.height, true, 0xff000000);
 		}
 		
@@ -284,15 +283,22 @@ package com.gskinner.zoe.utils {
 		}
 		
 		public function getCurrentFrameBounds():Rectangle {
+			findBoundsBmpd.fillRect(findBoundsBmpd.rect, 0xFFFFFF);
 			findBoundsBmpd.draw(swf, null, findBoundsColorTransform);
 			var frame:Rectangle = findBoundsBmpd.getColorBoundsRect(0xFFFFFF, boundsColorTint, false);
-			findBoundsBmpd.fillRect(findBoundsBmpd.rect, 0xFFFFFF);
 			return frame;
 		}
 		
 		protected function handleVariableCaptureFrames(event:Event):void {
 			var frame:Rectangle = getCurrentFrameBounds();
 			frame.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
+			
+			var scale:Number = fileModel.selectedItem.scale;
+			frame.x *= scale;
+			frame.y *= scale;
+			frame.width *= scale;
+			frame.height *= scale;
+			
 			captureBounds[currentCaptureFrame] = frame;
 
 			var row:Number = currentCaptureFrame / columnCount | 0;
@@ -301,17 +307,18 @@ package com.gskinner.zoe.utils {
 			var frameX:Number = (col * frame.width)-frame.width;
 			var frameY:Number = row * frame.height;
 			
-			var mtx:Matrix = new Matrix();
-			mtx.translate(frameX-frame.x, frameY-frame.y);
+			//var mtx:Matrix = new Matrix();
+			//mtx.translate(frameX-frame.x, frameY-frame.y);
 			
 			var rect:Rectangle = new Rectangle(frame.x, frame.y, frame.width, frame.height);
 
 			if (rect.width == 0) {
-				rect = new Rectangle(frame.x, frame.y, 1,1); 
+				rect = new Rectangle(frame.x, frame.y, 1, 1); 
 			}
 			
-			//Capture just one frame here, we peice it together at the end.
+			//Capture just one frame here, we piece it together at the end.
 			var mtx2:Matrix = new Matrix();
+			mtx2.scale(scale, scale);
 			mtx2.translate(-rect.x, -rect.y);
 			
 			var singleFrame:BitmapData = new BitmapData(rect.width, rect.height, true, 0xff0000);
@@ -421,6 +428,7 @@ package com.gskinner.zoe.utils {
 		 */
 		protected function handleCaptureFrames(event:Event):void {
 			var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+			var scale:Number = fileModel.selectedItem.scale;
 			
 			var row:Number = currentCaptureFrame / columnCount | 0;
 			var col:Number = currentCaptureFrame % columnCount | 0;
@@ -428,12 +436,13 @@ package com.gskinner.zoe.utils {
 			var frameX:Number = (col * _frameBounds.width)-_frameBounds.width;
 			var frameY:Number = row * _frameBounds.height;
 			
-			var mtx:Matrix = new Matrix();
-			mtx.translate(frameX-_frameBounds.x, frameY-_frameBounds.y);
+			//var mtx:Matrix = new Matrix();
+			//mtx.translate(frameX-_frameBounds.x, frameY-_frameBounds.y);
 			var rect:Rectangle = new Rectangle(frameX, frameY, _frameBounds.width, _frameBounds.height);
 			
 			//Capture just one frame here, we peice it together at the end.
 			var mtx2:Matrix = new Matrix();
+			mtx2.scale(scale, scale);
 			mtx2.translate(-_frameBounds.x, -_frameBounds.y);
 			
 			var singleFrame:BitmapData = new BitmapData(_frameBounds.width, _frameBounds.height, true, 0xff0000);
@@ -757,7 +766,7 @@ package com.gskinner.zoe.utils {
 			var frames:Array = [];
 			var frameData:FrameData;
 			
-			for (var i:uint=start;i<end;i++) {
+			for (var i:uint=start;i<=end;i++) {
 				var data:Object = bitmaps[i];
 				
 				if (data is Number) {
