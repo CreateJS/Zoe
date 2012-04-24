@@ -181,7 +181,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addEventListener(Event.ENTER_FRAME, tick);
 				
 				imageExportList.dataProvider = new ArrayList([
-					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'SpriteSheet(2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'SpriteSheet (1024 x 1024)', size:1024, type:ExportType.IMAGE_SPRITE_SHEET },
+					{label:'SpriteSheet (512 x 512)', size:512, type:ExportType.IMAGE_SPRITE_SHEET },
+					{label:'SpriteSheet (256 x 256)', size:256, type:ExportType.IMAGE_SPRITE_SHEET},
 					{label:'Frames', type:ExportType.IMAGE_FRAME}
 				]);
 				
