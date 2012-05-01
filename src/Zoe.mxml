@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 -->
 <s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" showStatusBar="false"
-					   xmlns:s="library://ns.adobe.com/flex/spark" width="675" height="500" applicationComplete="init()"
+					   xmlns:s="library://ns.adobe.com/flex/spark" width="750" height="500" applicationComplete="init()"
 					   xmlns:mx="library://ns.adobe.com/flex/mx" skinClass="com.gskinner.skins.ApplicationSkin"
 					   xmlns:views="com.gskinner.zoe.views.*"
 					   nativeDragOver="handleDragOver(event)" nativeDragDrop="handleDragDrop(event)"

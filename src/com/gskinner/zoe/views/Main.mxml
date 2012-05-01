@@ -54,6 +54,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			import com.gskinner.zoe.utils.FindSWFBounds;
 			
 			import mx.collections.ArrayList;
+			import mx.collections.IList;
 			import mx.controls.Alert;
 			import mx.core.FlexGlobals;
 			
@@ -181,7 +182,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addEventListener(Event.ENTER_FRAME, tick);
 				
 				imageExportList.dataProvider = new ArrayList([
-					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'SpriteSheet(2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'SpriteSheet (1024 x 1024)', size:1024, type:ExportType.IMAGE_SPRITE_SHEET },
+					{label:'SpriteSheet (512 x 512)', size:512, type:ExportType.IMAGE_SPRITE_SHEET },
+					{label:'SpriteSheet (256 x 256)', size:256, type:ExportType.IMAGE_SPRITE_SHEET},
 					{label:'Frames', type:ExportType.IMAGE_FRAME}
 				]);
 				
@@ -191,6 +195,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 															]);
 				
 				//Add add some help tooltips
+				maintainPowHelpBtn.toolTip = "Forces Zoe to always export SpriteSheet(s) with pow(2,n) dimensions. Even it means adding empty space onto the spritesheet.  **If data export is selected, this will also force the complex data to export.";
 				exportSizesHelpBtn.toolTip = "SpriteSheet: Exports one or more images (based on available size) with multiple frames on each image.\nFrames: Exports individual PNG's for each frame.";
 				previewPanel.statesListHelpBtn.toolTip = "If your swf has its states labeled using frame labels, they will be displayed here.";
 				exportJsonHelpBtn.toolTip = "Exports a JSON file that defines your animations, for use with EaselJS.";
@@ -420,11 +425,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 					previewPanel.updateColorPickerSkin(showGrid);
 					numFramesStep.value = item.frameCount || 0;
 					
+					maintainPow2Chk.selected = item.maintainPow2;
+					
 					imageExportList.selectedIndex = getListItemIndexByType(imageExportList.dataProvider as ArrayList, item.imageExportType);
 					dataExportList.selectedIndex = getListItemIndexByType(dataExportList.dataProvider as ArrayList, item.dataExportType);
 					
 					var bitmapWidth:Number = item.bitmapWidth || 0;
 					var bitmapHeight:Number = item.bitmapHeight || 0;
+					
+					var exportSizes:IList = imageExportList.dataProvider;
+					var l:uint = exportSizes.length;
+					for (var i:uint=0;i<l;i++) {
+						var row:Object = exportSizes.getItemAt(i);
+						if (row.size == bitmapWidth) {
+							imageExportList.selectedIndex = i; break;
+						}
+					}
 					
 					changeImageExportType();
 					changeDataExportType();
@@ -432,7 +448,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 					updateCapture(item.frameBounds);
 					updateUI(swfCapture.captureBounds);
 					updateViewFromColorChange();
-					
 					updateRegPt();
 				}
 			}
@@ -496,6 +511,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function updateUI(bounds:Rectangle):void {
+				maintainPow2Chk.enabled = !fileModel.selectedItem.variableFrameDimensions;
+				
+				if (maintainPow2Chk.enabled) {
+					maintainPow2Chk.toolTip = null;
+				} else {
+					maintainPow2Chk.toolTip = "When using variable frame size we don't change to pow(2,n)";
+				}
+				
 				if (bounds == null) { return; }
 				
 				xValue.value = bounds.x;
@@ -634,9 +657,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 			
 			protected function updateLiveBoundsUpdate():void {
 				if (fileModel.selectedItem == null) { return; }
+				
 				if (_playMode == PLAY && swfCapture && this.variableFrameDimensions.selected) {
 					this.addEventListener(Event.ENTER_FRAME, updatePreviewBounds, false, 0, true);
 					swfCapture.mouseEnabled = false;
+					updateUI(null);
 				} else if (!this.variableFrameDimensions.selected) {
 					this.removeEventListener(Event.ENTER_FRAME, updatePreviewBounds);
 					updateCapture((fileModel.selectedItem as SourceFileData).frameBounds);
@@ -770,6 +795,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				fileModel.setSelectedBitmapSize(w, h);
 				fileModel.selectedItem.imageExportType = option;
+			}
+			
+			/**
+			 * @private
+			 * 
+			 */
+			protected function handleExportPow2Change():void {
+				fileModel.setMaintainPow2(maintainPow2Chk.selected);
 			}
 			
 			protected function changeDataExportType():void {
@@ -1129,6 +1162,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:Label text="Image format " verticalAlign="middle" height="18" paddingTop="3" />
 				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
 				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:CheckBox id="maintainPow2Chk" label="pow(2,n)" change="handleExportPow2Change();" />
+				<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				<s:Label text="Data format " verticalAlign="middle" height="18" paddingTop="3" />
 				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
 				<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />

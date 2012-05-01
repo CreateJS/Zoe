@@ -39,6 +39,7 @@ package com.gskinner.zoe.model {
 	import flash.geom.Rectangle;
 	
 	import mx.collections.ArrayList;
+	import mx.events.InvalidateRequestData;
 	
 	import spark.components.DropDownList;
 	import spark.events.IndexChangeEvent;
@@ -96,7 +97,7 @@ package com.gskinner.zoe.model {
 		 */
 		public function deleteSelected():void {
 			_dp.removeItem(selectedItem);
-			CallLater.call(saveState, 2);
+			invalidate();
 			
 			_target.selectedIndex = 0;
 			
@@ -109,7 +110,7 @@ package com.gskinner.zoe.model {
 		 */
 		public function set registrationPt(value:Point):void {
 			selectedItem.registrationPt = value;
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -151,7 +152,7 @@ package com.gskinner.zoe.model {
 		public function set selectedFrameCount(value:Number):void {
 			selectedItem.frameCount = value;
 			
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -162,7 +163,13 @@ package com.gskinner.zoe.model {
 			selectedItem.bitmapWidth = w;
 			selectedItem.bitmapHeight = h;
 			
-			CallLater.call(saveState, 2);
+			invalidate();
+		}
+		
+		public function setMaintainPow2(value:Boolean):void {
+			selectedItem.maintainPow2 = value;
+			
+			invalidate();
 		}
 		
 		/**
@@ -172,7 +179,7 @@ package com.gskinner.zoe.model {
 		
 		public function setSelectedThreshold(value:Number):void {
 			selectedItem.threshold = value;
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -183,7 +190,7 @@ package com.gskinner.zoe.model {
 			selectedItem.showGrid = showGrid;
 			selectedItem.backgroundColor = color;
 			
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -192,7 +199,7 @@ package com.gskinner.zoe.model {
 		 */
 		public function setSelectedReuseFrames(value:Boolean):void {
 			selectedItem.reuseFrames = value;
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -206,7 +213,7 @@ package com.gskinner.zoe.model {
 			newFile.destinationPath = oldFile.destinationPath;
 			
 			_dp.setItemAt(newFile, _target.selectedIndex);
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -215,7 +222,7 @@ package com.gskinner.zoe.model {
 		 */
 		public function set selectedName(name:String):void {
 			selectedItem.name = name;
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -225,12 +232,12 @@ package com.gskinner.zoe.model {
 		public function setSelectedBounds(x:Number, y:Number, width:Number, height:Number, padding:Number = 0):void {
 			selectedItem.exportPadding = padding;
 			selectedItem.frameBounds = new Rectangle(x,y,width,height);
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		public function setSelectedScale(scale:Number):void {
 			selectedItem.scale = scale;
-			CallLater.call(saveState, 2);
+			invalidate();
 		}
 		
 		/**
@@ -240,7 +247,7 @@ package com.gskinner.zoe.model {
 		public function set selectedDestinationPath(value:String):void {
 			selectedItem.destinationPath = value;
 			
-			CallLater.call(saveState, 2);
+			invalidate();
 			dispatchEvent(new Event(Event.CHANGE));
 		}
 		
@@ -275,7 +282,7 @@ package com.gskinner.zoe.model {
 				_target.selectedIndex = _dp.length-1;
 			}
 			
-			CallLater.call(saveState, 2);
+			invalidate();
 			
 			dispatchEvent(new Event(Event.CHANGE));
 		}
@@ -285,7 +292,7 @@ package com.gskinner.zoe.model {
 		 * 
 		 */
 		protected function handleSelectionChange(event:IndexChangeEvent):void {
-			CallLater.call(saveState, 2);
+			invalidate();
 			dispatchEvent(new Event(Event.CHANGE));
 		}
 		
@@ -324,6 +331,14 @@ package com.gskinner.zoe.model {
 		 */
 		protected function dataToFile(data:Object):File {
 			return new File(data.url);
+		}
+		
+		/**
+		 * @private
+		 * 
+		 */
+		protected function invalidate():void {
+			CallLater.call(saveState, 2);
 		}
 	}
 }

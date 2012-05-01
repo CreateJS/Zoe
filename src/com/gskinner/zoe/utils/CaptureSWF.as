@@ -193,6 +193,10 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected var _displayPoint:Point;
+		
+		protected var _frameCaptureWidth:Number;
+		
+		protected var _frameCaptureHeight:Number;
 	
 		/**
 		 * Created a new CaptureSwf instance.
@@ -264,6 +268,15 @@ package com.gskinner.zoe.utils {
 			if ((variableFrameDimensions && !reuseFrames) || (variableFrameDimensions && reuseFrames)) {
 				captureVariableSizeFrames();
 			} else {
+				var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+				_frameCaptureWidth = _frameBounds.width;
+				_frameCaptureHeight = _frameBounds.height;
+				
+				if (fileModel.selectedItem.maintainPow2) {
+					_frameCaptureWidth = findNextPower2(_frameCaptureWidth);
+					_frameCaptureHeight = findNextPower2(_frameCaptureHeight);
+				}
+				
 				handleCaptureFrames(null);
 				swf.addEventListener(Event.ENTER_FRAME, handleCaptureFrames, false, 0, true);
 			}
@@ -412,6 +425,8 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected function findNextPower2(value:Number):int {
+			value--; //Minus one just in-case this value is actually a pow(2,n) already.
+			
 			var pow:int;
 			for (;true;) {
 				pow = Math.pow(2, Math.round(Math.log(value++) / Math.log(2)));
@@ -433,20 +448,18 @@ package com.gskinner.zoe.utils {
 			var row:Number = currentCaptureFrame / columnCount | 0;
 			var col:Number = currentCaptureFrame % columnCount | 0;
 			
-			var frameX:Number = (col * _frameBounds.width)-_frameBounds.width;
-			var frameY:Number = row * _frameBounds.height;
+			var frameX:Number = (col * _frameCaptureWidth)-_frameCaptureWidth;
+			var frameY:Number = row * _frameCaptureHeight;
 			
-			//var mtx:Matrix = new Matrix();
-			//mtx.translate(frameX-_frameBounds.x, frameY-_frameBounds.y);
-			var rect:Rectangle = new Rectangle(frameX, frameY, _frameBounds.width, _frameBounds.height);
+			var rect:Rectangle = new Rectangle(frameX, frameY, _frameCaptureWidth, _frameCaptureHeight);
 			
 			//Capture just one frame here, we peice it together at the end.
 			var mtx2:Matrix = new Matrix();
 			mtx2.scale(scale, scale);
 			mtx2.translate(-_frameBounds.x, -_frameBounds.y);
 			
-			var singleFrame:BitmapData = new BitmapData(_frameBounds.width, _frameBounds.height, true, 0xff0000);
-			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, _frameBounds.width, _frameBounds.height),true);
+			var singleFrame:BitmapData = new BitmapData(_frameCaptureWidth, _frameCaptureHeight, true, 0xff0000);
+			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, _frameCaptureWidth, _frameCaptureHeight),true);
 			
 			bitmaps.push(new FrameData(singleFrame,currentCaptureFrame, swf.currentLabel));
 			
@@ -479,6 +492,7 @@ package com.gskinner.zoe.utils {
 			var exportBitmaps:Array = [];
 			var requestedWidth:Number = fileModel.selectedItem.bitmapWidth;
 			var requestedHeight:Number = fileModel.selectedItem.bitmapHeight;
+			var maintainPow2:Boolean = fileModel.selectedItem.maintainPow2;
 			
 			exportedImageNames = [];
 			
@@ -614,16 +628,19 @@ package com.gskinner.zoe.utils {
 					
 					//Size the bitmap to a pow(2).
 					//Doesn't work if we don't export all the frames (with correct positions);
-					//if (realWidth < 2048 || realHeight < 2048) {
-						//var newW:Number = findNextPower2(realWidth);
-						//var newH:Number = findNextPower2(realHeight);
-						var tmpBitmap:BitmapData = new BitmapData(realWidth, realHeight, true, 0xffffff);
+					if (maintainPow2) {
+						var newW:Number = findNextPower2(realWidth);
+						var newH:Number = findNextPower2(realHeight);
+						
+						var tmpBitmap:BitmapData = new BitmapData(newW, newH, true, 0xffffff);
 						tmpBitmap.copyPixels(bmpd,new Rectangle(0,0,realWidth,realHeight), new Point());
+						
 						bmpd = tmpBitmap;
 						(exportBitmaps[i].bmpd as BitmapData).dispose();
-					//}
+					}
 					
 					saved = saveImage(fileModel.selectedItem.destinationPath + '/'+fileName, bmpd);
+					
 					bmpd.dispose();
 					//An error happened during export ... user already has been notifyed, so ignore and move on.
 					if (!saved) { return; }
@@ -682,11 +699,11 @@ package com.gskinner.zoe.utils {
 			var animations:Object = {};
 			
 			var origRect:Rectangle = fileModel.selectedItem.frameBounds;
-			var regPoint:Point=fileModel.selectedItem.registrationPt;
+			var regPoint:Point = fileModel.selectedItem.registrationPt;
 			
 			l = bitmaps.length;
 			
-			if (isComplex) {
+			if (isComplex || fileModel.selectedItem.maintainPow2) {
 				//Build the frames array.
 				for (i=0;i<l;i++) {
 					var tempData:Object = bitmaps[i];

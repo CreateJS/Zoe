@@ -7,7 +7,7 @@
 	
 	<initialWindow>
 		<content>[This value will be overwritten by Flash Builder in the output app.xml]</content>
-		<minSize>675 430</minSize>
+		<minSize>750 430</minSize>
 		<autoOrients>false</autoOrients>
 	    <fullScreen>false</fullScreen>
 	    <visible>true</visible>

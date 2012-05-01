@@ -106,6 +106,11 @@ package com.gskinner.zoe.data {
 		public var reuseFrames:Boolean;
 		
 		/**
+		 * Flag to always export image with pow(2,n) sizes.
+		 */
+		public var maintainPow2:Boolean;
+		
+		/**
 		 * @private
 		 */
 		protected var _name:String;
@@ -197,6 +202,7 @@ package com.gskinner.zoe.data {
 				variableFrameDimensions:variableFrameDimensions,
 				displayPt:displayPt,
 				frameCount:frameCount,
+				maintainPow2:maintainPow2,
 				isDirty:isDirty
 			}
 			
@@ -227,6 +233,7 @@ package com.gskinner.zoe.data {
 			dataExportType = value.dataExportType || ExportType.DATA_JSON;
 			imageExportType = value.imageExportType || ExportType.IMAGE_SPRITE_SHEET;
 			scale = value.scale || 1;
+			maintainPow2 = value.maintainPow2 || false;
 		}
 	}
 }
