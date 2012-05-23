@@ -37,6 +37,7 @@ package com.gskinner.zoe.utils {
 	import com.maccherone.json.JSON;
 	
 	import flash.display.BitmapData;
+	import flash.display.DisplayObject;
 	import flash.display.MovieClip;
 	import flash.display.Stage;
 	import flash.events.Event;
@@ -48,6 +49,7 @@ package com.gskinner.zoe.utils {
 	import flash.geom.Matrix;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
+	import flash.net.URLVariables;
 	import flash.utils.Dictionary;
 	
 	/**
@@ -68,12 +70,6 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected var currentCaptureFrame:uint;
-		
-		/**
-		 * @private
-		 * 
-		 */
-		protected var registrationPoint:Point;
 		
 		/**
 		 * @private
@@ -188,6 +184,8 @@ package com.gskinner.zoe.utils {
 		 */
 		protected var isComplex:Boolean = false;
 		
+		protected var zeroRegistrationPoint:Point;
+		
 		/**
 		 * @private
 		 * 
@@ -214,14 +212,15 @@ package com.gskinner.zoe.utils {
 			
 			findBoundsColorTransform = new ColorTransform();
 			findBoundsColorTransform.color = boundsColorTint;
+			
+			zeroRegistrationPoint = new Point();
 		}
 		
 		/**
 		 * Sets a new swf and registrationPoint.
 		 * 
 		 */
-		public function updateSWF(swf:MovieClip, registrationPoint:Point = null):void {
-			this.registrationPoint = registrationPoint;
+		public function updateSWF(swf:MovieClip):void {
 			this.swf = swf;
 		}
 		
@@ -337,7 +336,10 @@ package com.gskinner.zoe.utils {
 			var singleFrame:BitmapData = new BitmapData(rect.width, rect.height, true, 0xff0000);
 			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, rect.width, rect.height),true);
 			var label:String = (swf.currentLabel == null) ? 'all' : swf.currentLabel;
-			bitmaps.push(new FrameData(singleFrame, currentCaptureFrame, label));
+			
+			var frameData:FrameData = new FrameData(singleFrame, currentCaptureFrame, label);
+			frameData.registrationPoint = getRegistrationPoint();
+			bitmaps.push(frameData);
 			
 			currentCaptureFrame++;
 			
@@ -383,9 +385,27 @@ package com.gskinner.zoe.utils {
 			for (var i:uint=0;i<l;i++) {
 				swf.gotoAndStop(i);
 				
-				var lbl:String = (swf.currentFrameLabel == null) ? 'all' : swf.currentFrameLabel;
+				var frameLabel:String = (swf.currentFrameLabel == null) ? 'all' : swf.currentFrameLabel;
+				var frameLabelObject:Object
 				
-				if (lbl == null || stateHash[lbl] != null) { continue; }
+				if (frameLabel.indexOf('=') != -1) {
+					try { //wdg:: try catch, just incase a incorrect string slips in.
+						frameLabelObject = new URLVariables(frameLabel);
+					} catch (e:*) {
+						frameLabelObject = {label:frameLabel};
+					}
+				} else {
+					frameLabelObject = {label:frameLabel};
+				}
+				var label:String = frameLabelObject.label;
+				
+				//Not a label, so just add any actions and move on.
+				if (!('label' in frameLabelObject)) {
+					states[states.length-1].addActions(frameLabelObject);
+					continue;
+				}
+				
+				if (stateHash[label] != null) { continue; }
 				
 				var startIndex:uint;
 				var endIndex:uint;
@@ -397,27 +417,23 @@ package com.gskinner.zoe.utils {
 				if (nextLabel != null) {
 					endIndex = startIndex = Math.max(0, i-1);
 				} else {
-					endIndex = findEndIndex(i+1, lbl);
+					endIndex = findEndIndex(i+1, label);
 					startIndex = Math.max(0, i-1);
 					i = endIndex+1;
 				}
 				
-				stateHash[lbl] = true; 
-				var framesObj:Object = hashFrames[lbl];
-				states.push(new AnimationState(lbl, startIndex, endIndex, framesObj));
+				stateHash[label] = true; 
+				var framesObj:Object = hashFrames[label];
+				
+				var state:AnimationState = new AnimationState(label, startIndex, endIndex, framesObj);
+				if (frameLabelObject) {
+					state.addActions(frameLabelObject);
+				}
+				states.push(state);
 				
 			}
 			
 			return states;
-		}
-		
-		/**
-		 * @private
-		 * 
-		 */
-		
-		public function updateRegistrationPoint(pt:Point):void {
-			registrationPoint = pt;
 		}
 	
 		/**
@@ -461,12 +477,24 @@ package com.gskinner.zoe.utils {
 			var singleFrame:BitmapData = new BitmapData(_frameCaptureWidth, _frameCaptureHeight, true, 0xff0000);
 			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, _frameCaptureWidth, _frameCaptureHeight),true);
 			
-			bitmaps.push(new FrameData(singleFrame,currentCaptureFrame, swf.currentLabel));
+			var frameData:FrameData = new FrameData(singleFrame,currentCaptureFrame, swf.currentLabel);
+			frameData.registrationPoint = getRegistrationPoint();
+			bitmaps.push(frameData);
 			
 			captureBounds[currentCaptureFrame] = rect;
 			
 			if (++currentCaptureFrame == frameCount) {
 				finishCapture();
+			}
+		}
+		
+		protected function getRegistrationPoint():Point {
+			var registrationPointClip:DisplayObject = swf.getChildByName('registrationPoint');
+			
+			if (registrationPointClip) {
+				return new Point(registrationPointClip.x, registrationPointClip.y);
+			} else {
+				return zeroRegistrationPoint;
 			}
 		}
 		
@@ -699,7 +727,6 @@ package com.gskinner.zoe.utils {
 			var animations:Object = {};
 			
 			var origRect:Rectangle = fileModel.selectedItem.frameBounds;
-			var regPoint:Point = fileModel.selectedItem.registrationPt;
 			
 			l = bitmaps.length;
 			
@@ -712,11 +739,12 @@ package com.gskinner.zoe.utils {
 						rect = pointLookup[frameData.point];
 						point = frameData.point;
 						
-						//Frame format: [x,y,w,h,index,regX,regY]
 						var captureRect:Rectangle = captureBounds[i];
-						var ox:Number = regPoint.x-captureRect.x;
-						var oy:Number = regPoint.y-captureRect.y;
 						
+						var ox:Number = frameData.registrationPoint.x-captureRect.x;
+						var oy:Number = frameData.registrationPoint.y-captureRect.y;
+						
+						//Frame format: [x,y,w,h,index,regX,regY]
 						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
 							frames.push([0,0,rect.width, rect.height,i,ox,oy]);
 						} else {
@@ -739,20 +767,38 @@ package com.gskinner.zoe.utils {
 				//Build labels out
 				for (i=0;i<statesCount;i++) {
 					var state:AnimationState = states[i];
-					animations[state.name] = {frames:getFramesForRange(state.startFrame, state.endFrame)};
+					var animationDef:Object = {frames:getFramesForRange(state.startFrame, state.endFrame)};
+					
+					if (state.next != null) {
+						animationDef.next = state.next;
+					}
+					if (!isNaN(state.frequency)) {
+						animationDef.frequency =  state.frequency;
+					}
+					animations[state.name] = animationDef;
 				}
 			} else {
 				var frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+				var registrationPoint:Point = (bitmaps[0] as FrameData).registrationPoint;
 				
-				frames = {width:frameBounds.width, 
+				frames = {
+					width:frameBounds.width, 
 					height:frameBounds.height, 
 					regX:(registrationPoint) ? registrationPoint.x: 0, 
-						regY:(registrationPoint) ? registrationPoint.y: 0, 
-						count:frameCount };
+					regY:(registrationPoint) ? registrationPoint.y: 0, 
+					count:frameCount
+				};
 				
 				for(i=0;i<statesCount;i++) {
 					state = states[i];
-					animations[state.name] = [state.startFrame, state.endFrame];
+					var frameDef:Array = [state.startFrame, state.endFrame];
+					if (state.next != null || !isNaN(state.frequency)) {
+						frameDef.push(state.next);
+					}
+					if (!isNaN(state.frequency)) {
+						frameDef.push(state.frequency);
+					}
+					animations[state.name] = frameDef;
 				}
 			}
 			
@@ -762,6 +808,7 @@ package com.gskinner.zoe.utils {
 			jsonData.animations = animations;
 			jsonData.images = exportedImageNames;
 			
+			//We don't use the default JSON object, because here we can create a pretty output.
 			var jsonString:String = com.maccherone.json.JSON.encode(jsonData, true, 500);
 			
 			return jsonString;

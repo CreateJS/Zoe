@@ -27,7 +27,6 @@
 
 package com.gskinner.zoe.data {
 	
-	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.utils.escapeMultiByte;
 	import flash.utils.unescapeMultiByte;
@@ -123,16 +122,6 @@ package com.gskinner.zoe.data {
 		/**
 		 * @private
 		 */
-		public var registrationPt:Point;
-		
-		/**
-		 * @private
-		 */
-		public var displayPt:Point;
-		
-		/**
-		 * @private
-		 */
 		public var variableFrameDimensions:Boolean;
 		
 		/**
@@ -198,9 +187,7 @@ package com.gskinner.zoe.data {
 				dataExportType:dataExportType,
 				
 				reuseFrames:reuseFrames,
-				registrationPt:registrationPt,
 				variableFrameDimensions:variableFrameDimensions,
-				displayPt:displayPt,
 				frameCount:frameCount,
 				maintainPow2:maintainPow2,
 				isDirty:isDirty
@@ -223,9 +210,7 @@ package com.gskinner.zoe.data {
 			destinationPath = value.destinationPath;
 			sourcePath = value.sourcePath;
 			name = value.name;
-			displayPt = (value.displayPt!= null) ? new Point(value.displayPt.x, value.displayPt.y) : new Point(0, 0);
 			variableFrameDimensions = value.variableFrameDimensions;
-			registrationPt = (value.registrationPt != null) ? new Point(value.registrationPt.x, value.registrationPt.y) : new Point(0, 0);
 			threshold = isNaN(value.threshold) ? 0 : value.threshold;
 			frameCount = isNaN(value.frameCount)? 0: value.frameCount;
 			isDirty = value.isDirty;

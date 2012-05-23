@@ -35,11 +35,9 @@ package com.gskinner.zoe.model {
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.filesystem.File;
-	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	
 	import mx.collections.ArrayList;
-	import mx.events.InvalidateRequestData;
 	
 	import spark.components.DropDownList;
 	import spark.events.IndexChangeEvent;
@@ -102,15 +100,6 @@ package com.gskinner.zoe.model {
 			_target.selectedIndex = 0;
 			
 			dispatchEvent(new Event(Event.CHANGE));
-		}
-		
-		/**
-		 * Sets the registration point for export.
-		 * 
-		 */
-		public function set registrationPt(value:Point):void {
-			selectedItem.registrationPt = value;
-			invalidate();
 		}
 		
 		/**

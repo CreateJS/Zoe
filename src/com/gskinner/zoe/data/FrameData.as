@@ -40,6 +40,7 @@ package com.gskinner.zoe.data {
 		public var index:uint;
 		public var sheetIndex:int = 0;
 		public var actualIndex:uint;
+		public var registrationPoint:Point;
 		
 		public function FrameData(bmpd:BitmapData, index:uint, label:String) {
 			this.ref = bmpd;

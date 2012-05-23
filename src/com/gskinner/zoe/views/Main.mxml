@@ -170,7 +170,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				mainMenu.addEventListener(IndexChangeEvent.CHANGE, handleMainNavChange, false, 0, true);
 				
 				swfCapture.addEventListener(CaptureEvent.SWF_INIT, handleCaptureSwfChange, false, 0, true);
-				swfCapture.addEventListener(CaptureEvent.REG_PT_CHANGE, handleCaptureRegPtChange, false, 0, true);
 				swfCapture.addEventListener(Event.CHANGE, handleCaptureChange, false, 0, true);
 				
 				addPreview();
@@ -251,13 +250,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				previewPanel.y = (swfCapture.y + swfCapture.height) - (previewPanel.height + 5);
 			}
 			
-			protected function updateRegPt():void {
-				var pt:Point = fileModel.selectedItem.displayPt as Point;
-				this.swfCapture.setRegPt(pt);
-				swfCapture.displayPadding(false);
-
-			}
-			
 			protected function handleCaptureChange(event:Event):void {
 				updateCapture(swfCapture.captureBounds);
 				updatePreviewPosition();
@@ -315,7 +307,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				statesDataProvider.removeAll();
 				statesDataProvider.addItem({name:'-- Play All --'});
 				
-				swfCaptureUtil.updateSWF(swfCapture.content, swfCapture.registrationPoint);
+				swfCaptureUtil.updateSWF(swfCapture.content);
 				var states:Vector.<AnimationState> = swfCaptureUtil.getStates();
 				var l:uint = states.length;
 				for (var i:uint=0;i<l;i++) {
@@ -327,14 +319,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				stateChange();
 			}
 			
-			protected function handleCaptureRegPtChange(event:CaptureEvent):void {
-				var data:Object = event.data;
-				fileModel.selectedItem.displayPt = data.displayPt;
-				fileModel.registrationPt = data.relativePt;
-				
-				swfCaptureUtil.updateRegistrationPoint(data.relativePt);
-			}
-			
 			/**
 			 * @private
 			 * 
@@ -343,7 +327,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				enabled = false;
 				ProgressOverlay.show('Calculating bounds');
 				
-				//We could be in an state preview, so stop that for now (we'll re-enable after the find bounds is complete.
+				//We could be in an state preview, so stop that for now (we'll re-enable after the find bounds is complete).
 				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				var findBounds:FindSWFBounds = new FindSWFBounds(swfCapture.content, fileModel.selectedItem.frameCount, swfCapture.scale);
 				findBounds.addEventListener(Event.COMPLETE, handleFoundBounds);
@@ -371,9 +355,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				//Reset the correct state
 				stateChange();
-				
-				//Places registration point
-				updateRegPoint();
 			}
 			
 			/**
@@ -448,7 +429,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 					updateCapture(item.frameBounds);
 					updateUI(swfCapture.captureBounds);
 					updateViewFromColorChange();
-					updateRegPt();
 				}
 			}
 			
@@ -916,7 +896,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 					multiplyBounds(bounds, 1/swfCapture.scale); // Normalize
 					multiplyBounds(bounds, scaleValue.value);
 					swfCapture.captureBounds = bounds;
-					updateRegPoint();
 				}
 				swfCapture.scale = scaleValue.value;
 				
@@ -1044,15 +1023,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				bounds.y *= scale;
 				bounds.width *= scale;
 				bounds.height *= scale;
-			}
-			
-			protected function updateRegPoint():void {
-				if (fileModel.selectedItem.isDirty) {
-					swfCapture.findMovieRegPoint();
-					fileModel.selectedItem.isDirty = false;
-				} else {
-					swfCapture.topAlignRegPoint();
-				}
 			}
 			
 		]]>

@@ -108,12 +108,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected var _registrationPoint:Point;
-			
-			/**
-			 * @private
-			 * 
-			 */
 			protected var _source:String;
 			
 			/**
@@ -180,19 +174,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			public var s:Shape;
+			protected var previewMask:Shape;
 			
 			/**
 			 * @private
 			 * 
 			 */
 			public var tt:ToolTip;
-			
-			/**
-			 * @private
-			 * 
-			 */
-			public var isDown:Boolean = false;
 			
 			private var _scale:Number = 1;
 			
@@ -227,20 +215,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addElement(dlContainer);
 				
 				regPtClipContainer = new UIComponent();
+				regPtClipContainer.addChild(createRegistrationPointSprite());
 				addElement(regPtClipContainer);
 				
-				s = new Shape();
-				
-				regPtClipContainer.useHandCursor = true;
-				regPtClipContainer.buttonMode = true;
-				
-				regPtClipContainer.mouseChildren = false;
-				regPtClipContainer.doubleClickEnabled = true;
-				
-				regPtClipContainer.addEventListener(MouseEvent.DOUBLE_CLICK, handleDoubleClick, false, 0, true);
-				regPtClipContainer.addEventListener(MouseEvent.MOUSE_DOWN, handleRegPointDown, false, 0, true);
-				regPtClipContainer.addEventListener(MouseEvent.MOUSE_UP, handleRegPointUp, false, 0, true);
-				regPtClipContainer.addEventListener(MouseEvent.MOUSE_MOVE, handleRegPointMove, false, 0, true);
+				previewMask = new Shape();
 				
 				tt = new ToolTip();
 				tt.hide();
@@ -314,16 +292,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (swfLoader != null) {
 					swfLoader.scaleX = swfLoader.scaleY = value;
 				}
-			}
-			
-			/**
-			 * Gets the swfs current registration point.
-			 * The registrationPoint is an optional movieclip placed in the loaded swf's root timeline
-			 * it is used to define the registrationPoint for use in Easel.
-			 * 
-			 */
-			public function get registrationPoint():Point {
-				return _registrationPoint;
 			}
 			
 			/**
@@ -425,22 +393,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			public function findMovieRegPoint():void {
-				var registrationPointClip:DisplayObject = content.getChildByName('registrationPoint');
-				if (registrationPointClip) {
-					var pt:Point = new Point(registrationPointClip.x, registrationPointClip.y);
-					regPtClipContainer.x = pt.x;
-					regPtClipContainer.y = pt.y;
-					this.updateRegPoint();
-				} else {
-					topAlignRegPoint();
-				}
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
 			public function topAlignRegPoint():void {
 				var rect:Rectangle = (dlContainer.visible) 
 					? this.dlContainer.getBounds(this) 
@@ -450,7 +402,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				regPtClipContainer.y = pt.y;
 				this.updateRegPoint();
 			}
-			
 			
 			/**
 			 * @private
@@ -708,53 +659,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				if (content == null) { return; }
 				
-				var registrationPointClip:DisplayObject = content.getChildByName('registrationPoint');
-				if (registrationPointClip) {
-					registrationPointClip.visible = false;
-					
-					_registrationPoint = new Point(registrationPointClip.x, registrationPointClip.y);
-					
-				} else {
-					var p:Point = getLocalPoint();
-					_registrationPoint = p;
-				}
+				updateRegPoint();
+				
 				dispatchEvent(new CaptureEvent(CaptureEvent.SWF_INIT));
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function handleRegPointDown(event:MouseEvent):void {
-				tt.show(); 
-				var clip:UIComponent = (event.currentTarget as UIComponent);
-				setElementIndex(clip, this.numElements - 1);
-				setElementIndex(tt, this.numElements - 1);
-				clip.startDrag();
-				isDown = true;
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			
-			protected function handleDoubleClick(event:MouseEvent):void {
-				topAlignRegPoint();
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function handleRegPointMove(event:MouseEvent):void {
-				Mouse.cursor = MouseCursor.BUTTON;
-				tt.labelField = 'Reg Point ' + getLocalPoint();
-				tt.x = mouseX + 5;
-				tt.y = mouseY + 25;
-				
-				checkBoundary();
-				
 			}
 			
 			/**
@@ -779,51 +686,20 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function handleRegPointUp(event:MouseEvent):void {
-				tt.hide();
-				var clip:UIComponent = (event.currentTarget as UIComponent);
-				clip.stopDrag();
-				updateRegPoint();
-				isDown = false;
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
 			public function updateRegPoint():void {
-				var p:Point = getLocalPoint();
-				var displayPt:Point = new Point();
-				if (registrationPoint) {
-					_registrationPoint.x = p.x;
-					_registrationPoint.y = p.y;
-					
-					
-				}else {
-					_registrationPoint = new Point(p.x, p.y);
+				if (!content || !regPtClipContainer) {
+					return;
 				}
 				
-				displayPt.x = regPtClipContainer.x;
-				displayPt.y = regPtClipContainer.y;
+				var registrationPointClip:DisplayObject = content.getChildByName('registrationPoint');
 				
-				dispatchEvent(new CaptureEvent(CaptureEvent.REG_PT_CHANGE, false, false, null, {displayPt:displayPt, relativePt:registrationPoint}));
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function getLocalPoint():Point {
-				var rect:Rectangle = (dlContainer.visible) ? this.dlContainer.getBounds(this) : new Rectangle(_captureBounds.x-1, _captureBounds.y-1, _captureBounds.width, _captureBounds.height);
-				
-				s.graphics.clear();
-				s.graphics.beginFill(0x0, 1);
-				s.graphics.drawRect(0, 0, rect.width, rect.height);
-				s.graphics.endFill();
-				s.x = rect.x;
-				s.y = rect.y;
-				
-				return s.globalToLocal(new Point(this.regPtClipContainer.x, this.regPtClipContainer.y));
+				if (registrationPointClip) {
+					registrationPointClip.visible = false;
+					var registrationPoint:Point = new Point(registrationPointClip.x, registrationPointClip.y);
+					
+					regPtClipContainer.x = registrationPoint.x;
+					regPtClipContainer.y = registrationPoint.y;
+				}
 			}
 			
 			/**
@@ -838,52 +714,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function createRegisterPoint():void {
-				if (regPtClipContainer.numChildren == 0) {
-					regPtClipContainer.addChild(getSprite());
-				}
-				
-				var pt:Point;
-				
-				if (this.fileModel.selectedItem.displayPt) {
-					pt = this.fileModel.selectedItem.displayPt
-				} else if (_registrationPoint != null) {
-					pt = _registrationPoint;
-				} else {
-					pt = new Point(0, 0);
-				}
-				
-				regPtClipContainer.x = pt.x;
-				regPtClipContainer.y = pt.y; 
-				
-				updateRegPoint();
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			public function setRegPt(pt:Point):void {
-				createRegisterPoint();
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function getSprite():Sprite {
+			protected function createRegistrationPointSprite():Sprite {
 				var s:Sprite = new Sprite();
 				var g:Graphics = s.graphics;
 				var radius:Number = 5;
 				
-				g.lineStyle(1, 0x000000, 0, true);
+				g.lineStyle(1, 0x666666, 0, true);
 				g.beginFill(0x000000, 0);
 				g.drawCircle(0, 0, radius*2);
 				g.beginFill(0xFFFFFF, 0);
 				g.drawCircle(0, 0, radius-1);
 				g.endFill();
 				
-				g.lineStyle(1, 0x000000, 1, true);
+				g.lineStyle(1, 0x666666, 1, true);
 				g.moveTo(-radius,0);
 				g.lineTo(radius, 0);
 				g.moveTo(0, radius);
@@ -892,10 +735,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 				return s;
 			}
 			
+			protected function handleSwfTick(event:Event):void {
+				updateRegPoint();
+			}
+			
 		]]>
 	</fx:Script>
 	
 	<mx:Canvas id="background" width="100%" height="100%"  mouseMove="handleMouseMove()" mouseDown="handleMouseDown()" mouseUp="handleMouseUp()" />
-	<mx:SWFLoader id="swfLoader" securityError="handleError()" ioError="handleError()" mouseChildren="false" mouseEnabled="false" init="handleSwfLoad()" scaleContent="false" />
+	<mx:SWFLoader id="swfLoader" securityError="handleError()" ioError="handleError()" enterFrame="handleSwfTick(event)" mouseChildren="false" mouseEnabled="false" init="handleSwfLoad()" scaleContent="false" />
 	
 </s:SkinnableContainer>
