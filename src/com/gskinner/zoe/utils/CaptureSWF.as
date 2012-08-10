@@ -382,7 +382,7 @@ package com.gskinner.zoe.utils {
 			var l:uint = frameCount;
 			var stateHash:Object = {};
 			var count:Number = 0;
-			for (var i:uint=0;i<l;i++) {
+			for (var i:uint=0;i<=l;i++) {
 				swf.gotoAndStop(i);
 				
 				var frameLabel:String = (swf.currentFrameLabel == null) ? 'all' : swf.currentFrameLabel;
@@ -741,8 +741,16 @@ package com.gskinner.zoe.utils {
 						
 						var captureRect:Rectangle = captureBounds[i];
 						
-						var ox:Number = frameData.registrationPoint.x-captureRect.x;
-						var oy:Number = frameData.registrationPoint.y-captureRect.y;
+						var ox:Number = 0; 
+						var oy:Number = 0;
+						
+						if (frameData.registrationPoint.x != 0) {
+							ox = frameData.registrationPoint.x-captureRect.x;
+						}
+						
+						if (frameData.registrationPoint.y != 0) {	
+							oy = frameData.registrationPoint.y-captureRect.y;
+						}
 						
 						//Frame format: [x,y,w,h,index,regX,regY]
 						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {

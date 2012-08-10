@@ -646,7 +646,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function handleSwfLoad():void {
 				if (swfLoader.content is AVM1Movie) {
-					Alert.show('Your SWF is not supported, please use a Flash 9 or greater swf.', 'Unsupported SWF');
+					Alert.show('Your SWF is not supported. Please use a swf that is compiled using Player 9 or greater and the language version is AS3.', 'Unsupported SWF');
 					fileModel.deleteSelected();
 					return;
 				}
