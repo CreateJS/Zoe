@@ -122,7 +122,7 @@ package com.gskinner.zoe.data {
 		/**
 		 * @private
 		 */
-		public var variableFrameDimensions:Boolean;
+		public var variableFrameDimensions:Boolean = true;
 		
 		/**
 		 * @private
@@ -137,7 +137,8 @@ package com.gskinner.zoe.data {
 			frameBounds = new Rectangle();
 			backgroundColor = 0xcccccc;
 			showGrid = true;
-			exportPadding = 0;
+			maintainPow2 = true;
+			exportPadding = 2;
 			frameCount = 0;
 			scale = 1;
 		}
@@ -210,7 +211,7 @@ package com.gskinner.zoe.data {
 			destinationPath = value.destinationPath;
 			sourcePath = value.sourcePath;
 			name = value.name;
-			variableFrameDimensions = value.variableFrameDimensions;
+			variableFrameDimensions = value.variableFrameDimensions || true;
 			threshold = isNaN(value.threshold) ? 0 : value.threshold;
 			frameCount = isNaN(value.frameCount)? 0: value.frameCount;
 			isDirty = value.isDirty;
@@ -218,7 +219,7 @@ package com.gskinner.zoe.data {
 			dataExportType = value.dataExportType || ExportType.DATA_JSON;
 			imageExportType = value.imageExportType || ExportType.IMAGE_SPRITE_SHEET;
 			scale = value.scale || 1;
-			maintainPow2 = value.maintainPow2 || false;
+			maintainPow2 = value.maintainPow2 || true;
 		}
 	}
 }

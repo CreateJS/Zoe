@@ -181,7 +181,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addEventListener(Event.ENTER_FRAME, tick);
 				
 				imageExportList.dataProvider = new ArrayList([
-					{label:'SpriteSheet(2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
+					{label:'SpriteSheet (2048 x 1024)', w:2048, h:1024, size:"2048x024", type:ExportType.IMAGE_SPRITE_SHEET }, //iOS friendly
+					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
 					{label:'SpriteSheet (1024 x 1024)', size:1024, type:ExportType.IMAGE_SPRITE_SHEET },
 					{label:'SpriteSheet (512 x 512)', size:512, type:ExportType.IMAGE_SPRITE_SHEET },
 					{label:'SpriteSheet (256 x 256)', size:256, type:ExportType.IMAGE_SPRITE_SHEET},
@@ -194,7 +195,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 															]);
 				
 				//Add add some help tooltips
-				maintainPowHelpBtn.toolTip = "Forces Zoe to always export SpriteSheet(s) with pow(2,n) dimensions. Even it means adding empty space onto the spritesheet.  **If data export is selected, this will also force the complex data to export.";
+				maintainPowHelpBtn.toolTip = "Will trim spritesheet images to the smallest power of 2 dimensions possible based on the content.";
 				exportSizesHelpBtn.toolTip = "SpriteSheet: Exports one or more images (based on available size) with multiple frames on each image.\nFrames: Exports individual PNG's for each frame.";
 				previewPanel.statesListHelpBtn.toolTip = "If your swf has its states labeled using frame labels, they will be displayed here.";
 				exportJsonHelpBtn.toolTip = "Exports a JSON file that defines your animations, for use with EaselJS.";
@@ -491,14 +492,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function updateUI(bounds:Rectangle):void {
-				maintainPow2Chk.enabled = !fileModel.selectedItem.variableFrameDimensions;
-				
-				if (maintainPow2Chk.enabled) {
-					maintainPow2Chk.toolTip = null;
-				} else {
-					maintainPow2Chk.toolTip = "When using variable frame size we don't change to pow(2,n)";
-				}
-				
 				if (bounds == null) { return; }
 				
 				xValue.value = bounds.x;
@@ -770,8 +763,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 				var w:Number; 
 				var h:Number;
 				
-				var option:String = imageExportList.selectedItem.type;
-				h = w = imageExportList.selectedItem.size;
+				var o:Object = imageExportList.selectedItem;
+				
+				var option:String = o.type;
+				if (o.size is Number) {
+					h = w = imageExportList.selectedItem.size;
+				} else {
+					w = o.w;
+					h = o.h;
+				}
 				
 				fileModel.setSelectedBitmapSize(w, h);
 				fileModel.selectedItem.imageExportType = option;
@@ -1132,7 +1132,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:Label text="Image format " verticalAlign="middle" height="18" paddingTop="3" />
 				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
 				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:CheckBox id="maintainPow2Chk" label="pow(2,n)" change="handleExportPow2Change();" />
+				<s:CheckBox id="maintainPow2Chk" label="Trim" change="handleExportPow2Change();" />
 				<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				<s:Label text="Data format " verticalAlign="middle" height="18" paddingTop="3" />
 				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
