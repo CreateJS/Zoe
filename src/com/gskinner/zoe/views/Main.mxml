@@ -181,7 +181,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addEventListener(Event.ENTER_FRAME, tick);
 				
 				imageExportList.dataProvider = new ArrayList([
-					{label:'SpriteSheet (2048 x 1024)', w:2048, h:1024, size:"2048x024", type:ExportType.IMAGE_SPRITE_SHEET }, //iOS friendly
+					{label:'SpriteSheet (2048 x 1024)', w:2048, h:1024, size:"2048x1024", type:ExportType.IMAGE_SPRITE_SHEET }, //iOS friendly
 					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
 					{label:'SpriteSheet (1024 x 1024)', size:1024, type:ExportType.IMAGE_SPRITE_SHEET },
 					{label:'SpriteSheet (512 x 512)', size:512, type:ExportType.IMAGE_SPRITE_SHEET },
@@ -419,7 +419,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					var l:uint = exportSizes.length;
 					for (var i:uint=0;i<l;i++) {
 						var row:Object = exportSizes.getItemAt(i);
-						if (row.size == bitmapWidth) {
+						if (row.size is Number && row.size == bitmapWidth || row.size is String && row.w == bitmapWidth && row.h == bitmapHeight) {
 							imageExportList.selectedIndex = i; break;
 						}
 					}
