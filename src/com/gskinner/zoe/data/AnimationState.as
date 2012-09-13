@@ -43,12 +43,6 @@ package com.gskinner.zoe.data {
 		public var name:String;
 		
 		/**
-		 * Any frames attached to this state.
-		 * 
-		 */
-		public var frames:Object;
-		
-		/**
 		 * The start of this state.
 		 * 
 		 */
@@ -74,11 +68,10 @@ package com.gskinner.zoe.data {
 		 * @param endFrame The 0 based end frame of this state.
 		 * 
 		 */
-		public function AnimationState(name:String, startFrame:uint, endFrame:uint, frames:Object=null) {
+		public function AnimationState(name:String, startFrame:uint, endFrame:uint) {
 			this.name = name;
 			this.startFrame = startFrame;
 			this.endFrame = endFrame;
-			this.frames = frames;
 			
 			_actions = {};
 		}

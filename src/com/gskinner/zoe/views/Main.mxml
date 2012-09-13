@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 		 xmlns:views="com.gskinner.zoe.views.*"
 		 xmlns:controls="com.gskinner.zoe.controls.*"
 		 xmlns:ui="com.gskinner.zoe.ui.*"
-		 creationComplete="init()" resize="handleResize();"
+		 creationComplete="init()"
 		 >
 	
 	<fx:Script>
@@ -49,6 +49,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			import com.gskinner.zoe.data.SourceFileData;
 			import com.gskinner.zoe.events.CaptureEvent;
 			import com.gskinner.zoe.events.PreviewPanelEvent;
+			import com.gskinner.zoe.events.ResultEvent;
 			import com.gskinner.zoe.model.FileModel;
 			import com.gskinner.zoe.utils.CaptureSWF;
 			import com.gskinner.zoe.utils.FindSWFBounds;
@@ -149,6 +150,21 @@ OTHER DEALINGS IN THE SOFTWARE.
 				swfCapture.source = fileModel.selectedItem.sourcePath;
 			}
 			
+			protected function getExportPaddingValue():Number {
+				var value:Number = exportPadding.value;
+				if (isNaN(value)) {
+					exportPadding.value = 1;
+				}
+				return exportPadding.value;
+			}
+			
+			override public function set enabled(value:Boolean):void {
+				super.enabled = value;
+				if (previewPanel) {
+					previewPanel.enabled = value;
+				}
+			}
+			
 			/**
 			 * @private
 			 * 
@@ -163,7 +179,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				swfCaptureUtil = new CaptureSWF(fileModel);
 				swfCaptureUtil.addEventListener(CaptureEvent.BEGIN, handleCaptureBegin, false, 0, true);
-				swfCaptureUtil.addEventListener(Event.COMPLETE, handleCaptureComplete, false, 0, true);
+				swfCaptureUtil.addEventListener(ResultEvent.COMPLETE, handleCaptureComplete, false, 0, true);
 				swfCaptureUtil.addEventListener(CaptureEvent.INVALID_BITMAP, hadleExportInvalid, false, 0, true);
 				swfCaptureUtil.addEventListener(CaptureEvent.INVALID_PATH, hadleExportInvalid, false, 0, true);
 				
@@ -181,7 +197,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addEventListener(Event.ENTER_FRAME, tick);
 				
 				imageExportList.dataProvider = new ArrayList([
-					{label:'SpriteSheet (2048 x 1024)', w:2048, h:1024, size:"2048x1024", type:ExportType.IMAGE_SPRITE_SHEET }, //iOS friendly
+					//{label:'SpriteSheet (2048 x 1024)', w:2048, h:1024, size:"2048x1024", type:ExportType.IMAGE_SPRITE_SHEET }, //iOS friendly
 					{label:'SpriteSheet (2048 x 2048)', size:2048, type:ExportType.IMAGE_SPRITE_SHEET},
 					{label:'SpriteSheet (1024 x 1024)', size:1024, type:ExportType.IMAGE_SPRITE_SHEET },
 					{label:'SpriteSheet (512 x 512)', size:512, type:ExportType.IMAGE_SPRITE_SHEET },
@@ -204,7 +220,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addFileBtn.toolTip = "Browse for a swf file.  You can also drag and drop file(s) onto the application.";
 				exportBtn.toolTip = "Exports your animation to disk.";
 				deleteButton.toolTip = "Deletes the current item from the list, local files are not modified.";
-				exportPaddingHelpBtn.toolTip = "There is no visual preview for padding. It's applied to each frame during export.";
+				exportPaddingHelpBtn.toolTip = "A dotted line will appear around the image to indicate the padding. It's applied to each frame during export.";
 				scaleHelpBtn.toolTip = "Scale the spritesheet for export."
 				thresholdHelpBtn.toolTip = "Adjusting the scaling magnitude or intensity in which frames are to be compared for export.";
 				variableFrameDimensionsHelpBtn.toolTip = "Performs rectangle packing optimizing sizing for sprites.";
@@ -215,17 +231,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				//Delay a few frames to reduce stalling on startup
 				CallLater.call(handleListChange, 3, [null]);
-				
-				this.addEventListener(Event.ADDED_TO_STAGE, handleStage, false, 0, true);
-			}
-			
-			protected function handleStage(event:Event):void {
-				handleResize();
-			}
-			
-			protected function handleResize():void {
-				if (!swfCaptureUtil) { return; }
-				swfCaptureUtil.createSizeBitmap(this.stage);
 			}
 			
 			protected function addPreview():void {
@@ -240,6 +245,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				previewPanel.addEventListener(PreviewPanelEvent.PLAY_CLICKED, togglePlayClick, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.UPDATE_FRAME_POSITION, handlePreviewFramePosition, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.UPDATE_SLIDER_POSITION, updateSliderPosition, false, 0, true);
+				previewPanel.enabled = fileList.selectedIndex != -1;
 				
 				previewPanel.includeInLayout = false;
 				updatePreviewPosition();
@@ -278,8 +284,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function handleCaptureComplete(event:Event):void {
-				ExportDialog.completeExport(fileModel, swfCaptureUtil.exportedImageNames);
+			protected function handleCaptureComplete(event:ResultEvent):void {
+				ExportDialog.completeExport(fileModel, swfCaptureUtil.exportedImageNames, event.data);
 				stateChange();
 			}
 			
@@ -301,14 +307,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				if (!swfCapture.captureBounds.equals(new Rectangle())) {
 					updateUI(swfCapture.captureBounds);
-				} else {
+				} else if (!fileModel.selectedItem.variableFrameDimensions) {
 					CallLater.call(findBounds, 2);
 				}
 				
 				statesDataProvider.removeAll();
 				statesDataProvider.addItem({name:'-- Play All --'});
 				
-				swfCaptureUtil.updateSWF(swfCapture.content);
+				swfCaptureUtil.updateSWF(swfCapture.swfLoader, fileModel.selectedItem.sourcePath);
 				var states:Vector.<AnimationState> = swfCaptureUtil.getStates();
 				var l:uint = states.length;
 				for (var i:uint=0;i<l;i++) {
@@ -325,6 +331,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function findBounds():void {
+				if (!swfCapture.content) { return; }
+				
 				enabled = false;
 				ProgressOverlay.show('Calculating bounds');
 				
@@ -365,14 +373,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected function handleListChange(event:Event):void {
 				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				
+				callLater(this.handleFileListChange, [null]);
+				
 				var item:SourceFileData = fileModel.selectedItem;
 				
 				if (item == null) {
 					swfCapture.source = null;
-					xValue.value = 0;
-					yValue.value = 0;
-					widthValue.value = 0;
-					heightValue.value = 0;
 					exportPadding.value = 0;
 					numFramesStep.value = 0;
 					threshold.value = 0;
@@ -395,7 +401,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					reuseFramesChk.selected = item.reuseFrames;
 					variableFrameDimensions.selected = item.variableFrameDimensions;
 					
-					if (exportPadding.value > 1) { swfCapture.padding = exportPadding.value; }
+					if (getExportPaddingValue() > 1) { swfCapture.padding = getExportPaddingValue(); }
 					swfCapture.scale = item.scale;
 					
 					sourcePathTxt.text = unescapeMultiByte(item.sourcePath);
@@ -469,22 +475,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (bounds == null) { return; }
 				swfCapture.captureBounds = bounds;
 				
-				xValue.value = bounds.x;
-				yValue.value = bounds.y;
-				widthValue.value = bounds.width;
-				heightValue.value = bounds.height;
-				
-				fileModel.setSelectedBounds(xValue.value, yValue.value, widthValue.value, heightValue.value, fileModel.selectedItem.exportPadding);
+				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, fileModel.selectedItem.exportPadding);
 				fileModel.setSelectedBitmapSize(fileModel.selectedItem.bitmapWidth, fileModel.selectedItem.bitmapHeight);
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function handlePositionChange():void {
-				var bounds:Rectangle = new Rectangle(xValue.value, yValue.value, widthValue.value, heightValue.value);
-				updateCapture(bounds);
 			}
 			
 			/**
@@ -494,11 +486,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected function updateUI(bounds:Rectangle):void {
 				if (bounds == null) { return; }
 				
-				xValue.value = bounds.x;
-				yValue.value = bounds.y;
-				widthValue.value = bounds.width;
-				heightValue.value = bounds.height;
-				
 				var padding:uint = 0;
 				if (fileModel.selectedItem && fileModel.selectedItem.frameBounds) {
 					padding = fileModel.selectedItem.exportPadding || 0;
@@ -506,7 +493,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				scaleValue.value = fileModel.selectedItem.scale;
 				
 				swfCapture.padding = padding;
-				fileModel.setSelectedBounds(xValue.value, yValue.value, widthValue.value, heightValue.value, padding);
+				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, padding);
 				
 			}
 			
@@ -795,6 +782,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleNumFramesStepChange():void {
+				if (isNaN(numFramesStep.value)) {
+					numFramesStep.value = 0;
+				}
+				
 				fileModel.selectedFrameCount = numFramesStep.value;
 			}
 			
@@ -865,7 +856,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				}
 				
 				var bounds:Rectangle = swfCapture.captureBounds;
-				bounds.inflate(exportPadding.value, exportPadding.value);
+				bounds.inflate(getExportPaddingValue(), getExportPaddingValue());
 				swfCaptureUtil.threshold = threshold.value;
 				swfCaptureUtil.capture();
 			}
@@ -886,7 +877,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected function handleExportPaddingChange():void {
 				var bounds:Rectangle = fileModel.swfCapture.captureBounds;
 				createBoundPreview(bounds);
-				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, exportPadding.value);
+				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, getExportPaddingValue());
 			}
 			
 			protected function handleScaleChange():void {
@@ -897,17 +888,23 @@ OTHER DEALINGS IN THE SOFTWARE.
 					multiplyBounds(bounds, scaleValue.value);
 					swfCapture.captureBounds = bounds;
 				}
+				
+				if (isNaN(scaleValue.value)) {
+					scaleValue.value = 1;
+				}
+				
 				swfCapture.scale = scaleValue.value;
+				
 				
 				fileModel.setSelectedScale(scaleValue.value);
 				
 				bounds = swfCapture.captureBounds;
 				createBoundPreview(bounds);
-				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, exportPadding.value);
+				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, getExportPaddingValue());
 			}
 			
 			protected function createBoundPreview(bounds:Rectangle):void {
-				swfCapture.padding = exportPadding.value;
+				swfCapture.padding = getExportPaddingValue();
 				swfCapture.updatePadding();
 			}
 			
@@ -969,6 +966,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 					case variableFrameDimensions:
 						fileModel.selectedItem.variableFrameDimensions = value;
 						updateLiveBoundsUpdate();
+						if (!value) {
+							findBounds();
+						}
 						break;
 					case reuseFramesChk:
 						fileModel.selectedItem.reuseFrames = value; 
@@ -1025,6 +1025,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				bounds.height *= scale;
 			}
 			
+			protected function handleFileListChange(event:IndexChangeEvent):void {
+				previewPanel.enabled = fileList.selectedIndex != -1;
+			}
+			
 		]]>
 	</fx:Script>
 	
@@ -1038,7 +1042,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			<s:Label id="appSubTitle" text="by gskinner.com" styleName="appTitleSmall"/>
 		</s:HGroup>
 		<s:HGroup verticalAlign="bottom" width="100%">
-			<s:DropDownList id="fileList" labelFunction="formatFileListLabel" prompt="Browse for a swf file or drag files onto the application." height="18" width="100%" />
+			<s:DropDownList id="fileList" labelFunction="formatFileListLabel" change="handleFileListChange(event)" prompt="Browse for a swf file or drag files onto the application." height="18" width="100%" />
 			<s:Button id="addFileBtn" styleName="addFileButton" click="handleBrowseClick()" />
 			<s:Button id="deleteButton" styleName="deleteButton" click="deleteAnimation()" />
 			<s:Button id="refreshBtn" styleName="refreshButton" click="refreshSWF()" />
@@ -1076,22 +1080,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 			</s:layout>
 			
 			<s:HGroup id="boundsLabelView" gap="10" width="100%">
-				<s:RichText text="x" width="50" styleName="contentText" includeInLayout="false" visible="false" />
-				<s:RichText text="y" width="70" styleName="contentText" includeInLayout="false" visible="false" />
-				<s:RichText text="width" width="50" styleName="contentText"  includeInLayout="false" visible="false"/>
-				<s:RichText text="height" width="70" styleName="contentText" includeInLayout="false" visible="false" />
 				<s:RichText text="Image Bounds" styleName="contentText" />
 				<mx:Spacer width="311" />
 				<s:RichText text="Reuse Frames" width="100" styleName="contentText" />
 			</s:HGroup>
 			
 			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
-				<s:NumericStepper id="xValue" minimum="0" maximum="1500"  width="50" stepSize="1" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" /> 
-				<s:NumericStepper id="yValue" minimum="0" maximum="1500"  stepSize="1"  width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
-				
-				<s:NumericStepper id="widthValue" value="75" minimum="5" maximum="1500" stepSize="1" width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
-				<s:NumericStepper id="heightValue" value="75" minimum="5" maximum="1500" stepSize="1" width="50" height="20" change="handlePositionChange()" includeInLayout="false" visible="false" />
-				
 				<s:NumericStepper id="exportPadding" width="40" height="20" minimum="0" maximum="99" stepSize="1"  change="handleExportPaddingChange()" />
 				<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
@@ -1105,8 +1099,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<mx:Spacer width="10" />
 				<s:CheckBox id="reuseFramesChk" label="" change="handleExportFormatChange(event)"/>
 				<s:HGroup paddingLeft="-5" paddingTop="5" width="100%">
-					<s:HSlider id="threshold" width="100%" dataTipFormatFunction="formatToleranceLbl" enabled="{reuseFramesChk.selected}" change="handleToleranceChange()" maximum="1" minimum="0" stepSize="0.01" value="0.5" />
-					</s:HGroup>
+					<s:HSlider id="threshold" width="100%" dataTipFormatFunction="formatToleranceLbl" enabled="{reuseFramesChk.selected}" change="handleToleranceChange()" maximum="1" minimum="0.01" stepSize="0.01" />
+				</s:HGroup>
 				<s:TextInput id="thresholdLbl" restrict="[0-9]" width="35" enabled="{threshold.enabled}" enter="handleToleranceEnter()" />
 				<s:Button id="thresholdHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				<mx:Spacer width="10" />

@@ -34,7 +34,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 -->
 <s:Panel width="450" height="235"
 		 horizontalCenter="0" verticalCenter="0"
-		 xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:fx="http://ns.adobe.com/mxml/2009" creationComplete="init(event)"
 		 xmlns:s="library://ns.adobe.com/flex/spark" title="Export"
 		 xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:controls="com.gskinner.controls.*"
 		 skinClass="com.gskinner.skins.UpdateDialogSkin" xmlns:ui="com.gskinner.ui.*"
@@ -46,7 +46,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 			import com.gskinner.zoe.data.SourceFileData;
 			import com.gskinner.zoe.model.FileModel;
 			
+			import flash.net.navigateToURL;
+			
+			import flashx.textLayout.conversion.TextConverter;
+			
 			import mx.core.FlexGlobals;
+			import mx.events.FlexEvent;
 			import mx.managers.PopUpManager;
 			
 			/**
@@ -75,7 +80,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * When the SptiteSheet export is complete, this is called to update the ui correctly. 
 			 * 
 			 */
-			public static function completeExport(model:FileModel, exportedImages:Array):void {
+			public static function completeExport(model:FileModel, exportedImages:Array, result:Object):void {
 				instance.model = model;
 				
 				instance.spinner.visible = false;
@@ -88,14 +93,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 				var selItem:SourceFileData = model.selectedItem;
 				var name:String = selItem.name;
 				
-				results.push('All assets were exported to: ' + unescapeMultiByte(selItem.destinationPath) + '\n');
+				results.push('All assets were exported to: <a href="event:' + unescapeMultiByte(selItem.destinationPath) + '">'+unescapeMultiByte(selItem.destinationPath)+'</a>');
+				results.push('');
+				
+				//{json:jsonString, startFrames:startFrames, currentFrames:currentFrames, droppedFrames:framesDroppedCount}
+				if (result) {
+					results.push("SWF has:  " + result.startFrames + ' frames.');
+					results.push("Dropped:  " + result.droppedFrames + ' similar frames.');
+					results.push("Exported: " + result.currentFrames + ' frames.');
+					results.push('');
+				}
 				
 				switch (selItem.imageExportType) {
 					case ExportType.IMAGE_SPRITE_SHEET:
 						if (exportedImages.length == 1) {
 							results.push('Sprite sheet exported as: ' + exportedImages[0]);
 						} else {
-							results.push('Multiple sprite sheets exported\: ' + exportedImages.join('\n\t') + '\n');
+							results.push('Multiple sprite sheets exported\: ' + exportedImages.join('<br>\t'));
+							results.push("");
 						}
 						
 						break;
@@ -108,7 +123,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 						results.push('JSON exported as: ' + name + '.json'); break;
 				}
 				
-				instance.outputText.text = unescapeMultiByte(results.join('\n'));
+				
+				var css:StyleSheet = new StyleSheet();
+				css.setStyle("a:link", {color:"#0000FF"});
+				css.setStyle("a:hover", {color:"#9999FF"});
+				
+				instance.outputText.styleSheet = css;
+				instance.outputText.htmlText = unescapeMultiByte(results.join('<br>'));
 			}
 			
 			/**
@@ -128,6 +149,16 @@ OTHER DEALINGS IN THE SOFTWARE.
 				PopUpManager.removePopUp(this);
 			}
 			
+			protected function handleResultClick(event:TextEvent):void {
+				//new File(event.text).openWithDefaultApplication();
+				//navigateToURL(new URLRequest(event.text));
+				handelOpenExportFolder();
+			}
+			
+			protected function init(event:FlexEvent):void {
+				
+			}
+			
 		]]>
 	</fx:Script>
 	<s:Button id="deleteButton" styleName="deleteButton" enabled="false" top="-25" left="430" click="handleCloseWindow()" />
@@ -136,11 +167,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 			<s:Label id="statusTxt" text="Exporting…" />
 			<ui:Spinner id="spinner" width="20" height="20" />
 		</s:HGroup>
-		<s:Scroller width="100%" height="100%">
-			<s:RichEditableText id="outputText" backgroundColor="0xeeeeee" 
-								paddingBottom="5" paddingTop="5" paddingLeft="5" paddingRight="5" 
-								width="100%" height="100%" />
-		</s:Scroller>
+		<mx:TextArea id="outputText" paddingBottom="5" paddingTop="5" paddingLeft="5" paddingRight="5" 
+					 width="100%" height="100%" link="handleResultClick(event);" />
+		
+		<!--
+		<s:TextArea id="outputText"
+					paddingBottom="5" paddingTop="5" paddingLeft="5" paddingRight="5" 
+					width="100%" height="100%"
+					/>
+		-->
 		<s:HGroup width="100%" id="bottomControls" enabled="false">
 			<s:Button id="openExportFolder" styleName="simpleButton" label="Open export folder" click="handelOpenExportFolder()" />
 			<mx:Spacer width="100%" />

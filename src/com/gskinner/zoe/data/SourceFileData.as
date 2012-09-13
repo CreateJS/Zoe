@@ -141,6 +141,10 @@ package com.gskinner.zoe.data {
 			exportPadding = 2;
 			frameCount = 0;
 			scale = 1;
+			
+			//Turn on re-use by default, set to a low tolerance (will only remove frames exactly the same) 
+			reuseFrames = true;
+			threshold = .01;
 		}
 		
 		/**

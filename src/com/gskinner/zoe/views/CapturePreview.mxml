@@ -225,6 +225,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addElement(tt);
 				
 				NativeApplication.nativeApplication.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, true);
+				
+				updateView();
 			}
 			
 			/**
