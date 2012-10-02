@@ -521,6 +521,7 @@ package com.gskinner.zoe.utils {
 			var registrationPointClip:DisplayObject = clip.getChildByName('registrationPoint');
 			
 			if (registrationPointClip) {
+				registrationPointClip.visible = false;
 				return new Point(registrationPointClip.x, registrationPointClip.y);
 			} else {
 				return zeroRegistrationPoint;
