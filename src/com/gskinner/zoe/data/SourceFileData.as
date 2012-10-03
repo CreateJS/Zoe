@@ -142,6 +142,9 @@ package com.gskinner.zoe.data {
 			frameCount = 0;
 			scale = 1;
 			
+			//Set the default image size
+			bitmapHeight = bitmapWidth = 2048;
+			
 			//Turn on re-use by default, set to a low tolerance (will only remove frames exactly the same) 
 			reuseFrames = true;
 			threshold = .01;
