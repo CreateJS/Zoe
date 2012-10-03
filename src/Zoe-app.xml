@@ -3,7 +3,7 @@
 	<id>Zoe</id>
 	<filename>Zoe</filename>
 	<name>Zoë</name>
-	<versionNumber>0.3.1</versionNumber>
+	<versionNumber>0.3.2</versionNumber>
 	
 	<initialWindow>
 		<content>[This value will be overwritten by Flash Builder in the output app.xml]</content>

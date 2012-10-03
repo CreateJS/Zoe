@@ -277,6 +277,8 @@ package com.gskinner.zoe.utils {
 		}
 		
 		protected function handleSwfInit(event:Event):void {
+			getRegistrationPoint(); //Hides the registration point, if it exists
+			
 			bitmaps = [];
 			
 			currentCaptureFrame = 0;
