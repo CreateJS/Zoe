@@ -283,7 +283,7 @@ package com.gskinner.zoe.utils {
 			
 			currentCaptureFrame = 0;
 			startFrameRate = _startSwf.stage.frameRate;
-			_startSwf.stage.frameRate = 60;
+			_startSwf.stage.frameRate = 1000;
 			clip.gotoAndPlay(0);
 			
 			captureBounds = [];
@@ -636,6 +636,17 @@ package com.gskinner.zoe.utils {
 				}
 			}
 			
+			//Update bitmaps array with correct index's
+			l = bitmaps.length;
+			var actualIndex:uint = 0;
+			for (i=0;i<l;i++) {
+				var data:Object = bitmaps[i];
+				if (data is FrameData) {
+					(data as FrameData).actualIndex = actualIndex;
+					actualIndex++;
+				}
+			}
+			
 			//Create export bitmap(s) ... if needed
 			if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_SPRITE_SHEET) {
 				var exportSheet:BitmapData = new BitmapData(requestedWidth, requestedHeight, true, 0xffffff);
@@ -717,7 +728,7 @@ package com.gskinner.zoe.utils {
 			if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
 				l = bitmapList.length;
 				for (i=0;i<l;i++) {
-					frameData = (bitmaps[i] is Number)?bitmaps[bitmaps[i]]:bitmaps[i];
+					frameData = (bitmapList[i] is Number)?bitmapList[bitmapList[i]]:bitmapList[i];
 					var bitmap:BitmapData = frameData.ref;
 					fileName = fileModel.selectedItem.name+'_frame_'+i+'.png';
 					exportedImageNames.push(fileName);
@@ -803,7 +814,7 @@ package com.gskinner.zoe.utils {
 						
 						//Frame format: [x,y,w,h,index,regX,regY]
 						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
-							frames.push([0,0,rect.width, rect.height,i,ox,oy]);
+							frames.push([0,0,rect.width, rect.height,frameData.actualIndex,ox,oy]);
 						} else {
 							frames.push([
 								point.x==0?point.x+padding:point.x+padding,
@@ -820,22 +831,10 @@ package com.gskinner.zoe.utils {
 					}
 				}
 				
-				//Update bitmaps array with correct index's
-				l = bitmaps.length;
-				var actualIndex:uint = 0;
-				for (i=0;i<l;i++) {
-					var data:Object = bitmaps[i];
-					if (data is FrameData) {
-						(data as FrameData).actualIndex = actualIndex;
-						actualIndex++;
-					}
-				}
-				
 				//Build labels out
 				for (i=0;i<statesCount;i++) {
 					var state:AnimationState = states[i];
 					var framesList:Array = getFramesForRange(state.startFrame, state.endFrame);
-					//trace(state.name, framesList);
 					var animationDef:Object = {frames:framesList};
 					
 					if (state.next != null) {
@@ -890,8 +889,10 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected function getFramesForRange(start:uint, end:uint):Array {
-			if (start == bitmaps.length) { start--; }
-			if (end == bitmaps.length) { end--; }
+			var bl:uint = bitmaps.length;
+			
+			if (start == bl) { start--; }
+			if (end == bl) { end--; }
 			
 			if (start == end) {
 				if (bitmaps[start] is Number) {
@@ -916,8 +917,8 @@ package com.gskinner.zoe.utils {
 				
 				if (frameData == null) { continue; }
 				
-				//Somtimes the last 2 frames can be incorrect, so filter them here.
-				if (currentLabel != null && currentLabel != frameData.currentLabel) {
+				//Sometimes the last 2 frames can be incorrect, so filter them here.
+				if (i == bl-1 && currentLabel != null && currentLabel != frameData.currentLabel) {
 					break;
 				}
 				
