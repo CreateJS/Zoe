@@ -304,7 +304,7 @@ package com.gskinner.zoe.utils {
 				}
 				
 				handleCaptureFrames(null);
-				clip.addEventListener(Event.ENTER_FRAME, handleCaptureFrames, false, 0, true);
+				clip.addEventListener(Event.EXIT_FRAME, handleCaptureFrames, false, 0, true);
 			}
 		}
 		
@@ -318,7 +318,7 @@ package com.gskinner.zoe.utils {
 			stage = _startSwf.stage;
 			
 			handleVariableCaptureFrames(null);
-			clip.addEventListener(Event.ENTER_FRAME, handleVariableCaptureFrames, false, 0, true);
+			clip.addEventListener(Event.EXIT_FRAME, handleVariableCaptureFrames, false, 0, true);
 		}
 		
 		public function getCurrentFrameBounds():Rectangle {
@@ -349,9 +349,6 @@ package com.gskinner.zoe.utils {
 			var frameX:Number = (col * frame.width)-frame.width;
 			var frameY:Number = row * frame.height;
 			
-			//var mtx:Matrix = new Matrix();
-			//mtx.translate(frameX-frame.x, frameY-frame.y);
-			
 			var rect:Rectangle = new Rectangle(frame.x, frame.y, frame.width, frame.height);
 
 			if (rect.width == 0) {
@@ -375,7 +372,7 @@ package com.gskinner.zoe.utils {
 			
 			if (currentCaptureFrame == this.frameCount) {
 				_startSwf.stage.frameRate = startFrameRate;
-				clip.removeEventListener(Event.ENTER_FRAME, handleVariableCaptureFrames);
+				clip.removeEventListener(Event.EXIT_FRAME, handleVariableCaptureFrames);
 				finishCapture();
 			}
 		}
@@ -452,8 +449,6 @@ package com.gskinner.zoe.utils {
 					startIndex = Math.max(0, i-1);
 					i = endIndex+1;
 				}				
-				
-				//trace('frameLabel, nextLabel: ', frameLabel, nextLabel, startIndex, endIndex);
 				
 				stateHash[label] = true; 
 				
@@ -535,7 +530,7 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected function finishCapture():void {
-			clip.removeEventListener(Event.ENTER_FRAME, handleCaptureFrames);
+			clip.removeEventListener(Event.EXIT_FRAME, handleCaptureFrames);
 			_startSwf.stage.frameRate = startFrameRate;
 			
 			var fs:FileStream = new FileStream();
@@ -599,13 +594,11 @@ package com.gskinner.zoe.utils {
 				}
 			}
 			
-			var padding:Number = 0;//fileModel.selectedItem.exportPadding;
-			
 			//If positions is empty, populate it
 			if (!positions) {
 				//Build our normal un-packed rect list.
-				var currX:Number = padding;
-				var currY:Number = padding;
+				var currX:Number = 0;
+				var currY:Number = 0;
 				
 				l = bitmapList.length;
 				positions = new Vector.<Point>(l);
@@ -624,14 +617,14 @@ package com.gskinner.zoe.utils {
 					positions.push(pt);
 					pointLookup[pt] = rect;
 					
-					sheetWidth = Math.max(sheetWidth, currX + rect.width + padding + padding);
-					sheetHeight = Math.max(sheetHeight, currY + rect.height + padding + padding);
+					sheetWidth = Math.max(sheetWidth, currX + rect.width);
+					sheetHeight = Math.max(sheetHeight, currY + rect.height);
 					
-					currX += rect.width+padding+padding;
+					currX += rect.width;
 					
 					if (currX + rect.width > requestedWidth) {
-						currY += rect.height + padding + padding;
-						currX = padding;
+						currY += rect.height;
+						currX = 0;
 					}
 				}
 			}
@@ -789,34 +782,24 @@ package com.gskinner.zoe.utils {
 					if (!(tempData is Number)) {
 						frameData = bitmaps[i];
 						rect = pointLookup[frameData.point];
+						rect.inflate(-fileModel.selectedItem.exportPadding, -fileModel.selectedItem.exportPadding);
+						
 						point = frameData.point;
 						
 						var captureRect:Rectangle = captureBounds[i];
-						rect.inflate(-fileModel.selectedItem.exportPadding, -fileModel.selectedItem.exportPadding);
 						
-						var ox:Number = 0; 
-						var oy:Number = 0;
-						
-						if (frameData.registrationPoint.x != 0) {
-							ox = frameData.registrationPoint.x-captureRect.x-padding;
-						}
-						
-						if (frameData.registrationPoint.y != 0) {	
-							oy = frameData.registrationPoint.y-captureRect.y-padding;
-						}
+						var ox:Number = frameData.registrationPoint.x-captureRect.x-fileModel.selectedItem.exportPadding;
+						var oy:Number = frameData.registrationPoint.y-captureRect.y-fileModel.selectedItem.exportPadding;
 						
 						//Round the Reg Points
 						ox = Math.round(ox);
 						oy = Math.round(oy);
 						
-						//Reset the padding on the c
-						captureRect.inflate(-fileModel.selectedItem.exportPadding, -fileModel.selectedItem.exportPadding);
-						
 						//Frame format: [x,y,w,h,index,regX,regY]
 						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
 							frames.push([0,0,rect.width, rect.height,frameData.actualIndex,ox,oy]);
 						} else {
-							frames.push([
+							var frame:Array = [
 								point.x==0?point.x+padding:point.x+padding,
 								point.y==0?point.y+padding:point.y+padding,
 								rect.width,
@@ -824,7 +807,9 @@ package com.gskinner.zoe.utils {
 								frameData.sheetIndex,
 								ox,
 								oy,
-							]);
+							];
+							
+							frames.push(frame);
 						}
 					} else {
 						framesDroppedCount++;
@@ -852,8 +837,8 @@ package com.gskinner.zoe.utils {
 				frames = {
 					width:frameBounds.width, 
 					height:frameBounds.height, 
-					regX:(registrationPoint) ? registrationPoint.x: 0, 
-					regY:(registrationPoint) ? registrationPoint.y: 0, 
+					regX:(registrationPoint) ? registrationPoint.x: 0,
+					regY:(registrationPoint) ? registrationPoint.y: 0,
 					count:frameCount
 				};
 				

@@ -139,7 +139,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			public function loadSwfs(files:Array):void {
-				this.removeEventListener(Event.ENTER_FRAME, updatePreviewBounds);
+				this.removeEventListener(Event.EXIT_FRAME, updatePreviewBounds);
 				
 				var l:uint = files.length;
 				for (var i:uint=0;i<l;i++) {
@@ -194,7 +194,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				previewPanel.frameSlider.maximum = 0;
 				
-				addEventListener(Event.ENTER_FRAME, tick);
+				addEventListener(Event.EXIT_FRAME, tick);
 				
 				imageExportList.dataProvider = new ArrayList([
 					//Sample of setting a non-square size
@@ -279,7 +279,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleCaptureBegin(event:CaptureEvent):void {
-				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
+				swfCapture.visible = false;
 				ExportDialog.show();
 			}
 			
@@ -289,6 +290,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function handleCaptureComplete(event:ResultEvent):void {
 				ExportDialog.completeExport(fileModel, swfCaptureUtil.exportedImageNames, event.data);
+				swfCapture.visible = true;
 				stateChange();
 			}
 			
@@ -340,7 +342,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				ProgressOverlay.show('Calculating bounds');
 				
 				//We could be in an state preview, so stop that for now (we'll re-enable after the find bounds is complete).
-				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
 				var findBounds:FindSWFBounds = new FindSWFBounds(swfCapture.content, fileModel.selectedItem.frameCount, swfCapture.scale);
 				findBounds.addEventListener(Event.COMPLETE, handleFoundBounds);
 				findBounds.findBounds();
@@ -374,7 +376,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleListChange(event:Event):void {
-				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
 				
 				callLater(this.handleFileListChange, [null]);
 				
@@ -622,11 +624,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 				if (fileModel.selectedItem == null) { return; }
 				
 				if (_playMode == PLAY && swfCapture && this.variableFrameDimensions.selected) {
-					this.addEventListener(Event.ENTER_FRAME, updatePreviewBounds, false, 0, true);
+					this.addEventListener(Event.EXIT_FRAME, updatePreviewBounds, false, 0, true);
 					swfCapture.mouseEnabled = false;
 					updateUI(null);
 				} else if (!this.variableFrameDimensions.selected) {
-					this.removeEventListener(Event.ENTER_FRAME, updatePreviewBounds);
+					this.removeEventListener(Event.EXIT_FRAME, updatePreviewBounds);
 					updateCapture((fileModel.selectedItem as SourceFileData).frameBounds);
 					updateUI(swfCapture.captureBounds);
 					swfCapture.mouseEnabled = true;
@@ -814,7 +816,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			
 			protected function stateChange():void {
-				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
+				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
 				playMode = PLAY;
 			}
 			
@@ -827,7 +829,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					selectedState = previewPanel.stateList.selectedItem;
 					if (selectedState.startFrame != selectedState.endFrame && selectedState.startFrame+1 != selectedState.endFrame) {
 						swfCapture.content.gotoAndPlay(selectedState.startFrame+1);
-						addEventListener(Event.ENTER_FRAME, watchStatePlaying);
+						addEventListener(Event.EXIT_FRAME, watchStatePlaying);
 					} else {
 						swfCapture.content.gotoAndStop(selectedState.startFrame==1?0:selectedState.startFrame+1);
 						playMode = PAUSE;

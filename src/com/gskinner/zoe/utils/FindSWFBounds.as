@@ -111,7 +111,7 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		public function findBounds():void {
-			swf.removeEventListener(Event.ENTER_FRAME, handleFindBounds);
+			swf.removeEventListener(Event.EXIT_FRAME, handleFindBounds);
 			
 			var bounds:Rectangle;
 			
@@ -139,7 +139,7 @@ package com.gskinner.zoe.utils {
 			handleFindBounds(null);
 			
 			if (_frameCount > 1) {
-				swf.addEventListener(Event.ENTER_FRAME, handleFindBounds, false, 0, false);
+				swf.addEventListener(Event.EXIT_FRAME, handleFindBounds, false, 0, false);
 			}
 		}
 		
@@ -163,7 +163,7 @@ package com.gskinner.zoe.utils {
 			findBoundsBmpd.draw(swf, null, findBoundsColorTransform);
 			if (_frameCount == ++count) {
 				stage.frameRate = startFrameRate;
-				swf.removeEventListener(Event.ENTER_FRAME, handleFindBounds);
+				swf.removeEventListener(Event.EXIT_FRAME, handleFindBounds);
 				
 				_bounds = findBoundsBmpd.getColorBoundsRect(0xFFFFFF, boundsColorTint, false);
 				
