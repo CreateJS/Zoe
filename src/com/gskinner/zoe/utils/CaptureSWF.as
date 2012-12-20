@@ -797,13 +797,8 @@ package com.gskinner.zoe.utils {
 						var ox:Number = 0; 
 						var oy:Number = 0;
 						
-						if (frameData.registrationPoint.x != 0) {
-							ox = frameData.registrationPoint.x-captureRect.x-padding;
-						}
-						
-						if (frameData.registrationPoint.y != 0) {	
-							oy = frameData.registrationPoint.y-captureRect.y-padding;
-						}
+						ox = frameData.registrationPoint.x-captureRect.x-padding;
+						oy = frameData.registrationPoint.y-captureRect.y-padding;
 						
 						//Round the Reg Points
 						ox = Math.round(ox);
