@@ -280,6 +280,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					fs.readBytes(ba, 0, file.size);
 					fs.close();
 					
+					swfLoader.addEventListener(Event.COMPLETE, dispatchEvent);
 					swfLoader.load(ba);
 				} else {
 					_captureBounds = null;

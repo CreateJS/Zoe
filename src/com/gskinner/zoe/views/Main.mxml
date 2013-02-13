@@ -847,11 +847,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				}
 			}
 			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function export():void {
+			public function export():void {
 				var selectedFile:SourceFileData = fileModel.selectedItem;
 				
 				if (selectedFile.imageExportType == ExportType.NONE && selectedFile.dataExportType == ExportType.NONE) {
@@ -863,6 +859,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 				var bounds:Rectangle = swfCapture.captureBounds;
 				bounds.inflate(getExportPaddingValue(), getExportPaddingValue());
 				swfCaptureUtil.threshold = threshold.value;
+				
+				
+				swfCaptureUtil.addEventListener(ResultEvent.COMPLETE, dispatchEvent);
 				swfCaptureUtil.capture();
 			}
 			
