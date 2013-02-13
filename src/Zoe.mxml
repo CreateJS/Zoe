@@ -41,17 +41,23 @@ OTHER DEALINGS IN THE SOFTWARE.
 					   xmlns:mx="library://ns.adobe.com/flex/mx" skinClass="com.gskinner.skins.ApplicationSkin"
 					   xmlns:views="com.gskinner.zoe.views.*"
 					   nativeDragOver="handleDragOver(event)" nativeDragDrop="handleDragDrop(event)"
+					   invoke="handleInvoke(event)"
 					   >
 	
 	<fx:Script>
 		<![CDATA[
 			import com.chewtinfoil.utils.DateUtils;
 			import com.gskinner.filesystem.Preferences;
+			import com.gskinner.zoe.events.CaptureEvent;
+			import com.gskinner.zoe.events.ResultEvent;
 			import com.gskinner.zoe.utils.ApplicationUpdater;
+			import com.gskinner.zoe.utils.PathUtils;
 			
 			import flash.desktop.ClipboardFormats;
 			import flash.desktop.NativeDragManager;
+			import flash.events.InvokeEvent;
 			import flash.filesystem.File;
+			import flash.utils.setTimeout;
 			
 			import mx.controls.Alert;
 			import mx.controls.ToolTip;
@@ -79,6 +85,32 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				this.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, handleError);
 			}
+			
+			protected function handleInvoke(event:InvokeEvent):void {
+				
+				if (event.arguments.length) {
+					
+					nativeApplication.executeInBackground = true;
+					
+					var path:String = event.arguments[0];
+					
+					if (!PathUtils.validate(path)) nativeApplication.exit(1);
+					
+					swfCapture.loadSwfs([ new File(path) ]);
+					
+					swfCapture.swfCapture.addEventListener(Event.COMPLETE, function(e:Event):void {
+						
+						swfCapture.addEventListener(ResultEvent.COMPLETE, function(e:ResultEvent):void {
+							
+							nativeApplication.exit(0);
+						});
+						swfCapture.export();
+					});
+					
+				}
+				
+			}
+			
 			
 			/**
 			 * @private
