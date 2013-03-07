@@ -122,7 +122,7 @@ package com.gskinner.zoe.data {
 		/**
 		 * @private
 		 */
-		public var variableFrameDimensions:Boolean = true;
+		public var variableFrameDimensions:Boolean;
 		
 		/**
 		 * @private
@@ -218,7 +218,7 @@ package com.gskinner.zoe.data {
 			destinationPath = value.destinationPath;
 			sourcePath = value.sourcePath;
 			name = value.name;
-			variableFrameDimensions = value.variableFrameDimensions || true;
+			variableFrameDimensions = value.variableFrameDimensions == null?true:value.variableFrameDimensions;
 			threshold = isNaN(value.threshold) ? 0 : value.threshold;
 			frameCount = isNaN(value.frameCount)? 0: value.frameCount;
 			isDirty = value.isDirty;

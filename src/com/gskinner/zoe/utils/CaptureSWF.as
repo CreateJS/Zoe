@@ -36,13 +36,11 @@ package com.gskinner.zoe.utils {
 	import com.gskinner.zoe.model.FileModel;
 	import com.maccherone.json.JSON;
 	
-	import flash.display.Bitmap;
 	import flash.display.BitmapData;
 	import flash.display.DisplayObject;
 	import flash.display.MovieClip;
 	import flash.display.PNGEncoderOptions;
 	import flash.display.Stage;
-	import flash.events.DataEvent;
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.filesystem.File;
@@ -55,10 +53,8 @@ package com.gskinner.zoe.utils {
 	import flash.net.URLVariables;
 	import flash.utils.ByteArray;
 	import flash.utils.Dictionary;
-	import flash.utils.getTimer;
 	
 	import mx.controls.SWFLoader;
-	import mx.core.Application;
 	
 	/**
 	 * Utility class used to capture each frame of the loaded clip.
@@ -264,6 +260,8 @@ package com.gskinner.zoe.utils {
 			isComplex = false;
 			positions = null;
 			pointLookup = null;
+			bitmaps = [];
+			captureBounds = [];
 			
 			//Reload the swf
 			_startSwf = swf;
@@ -279,14 +277,10 @@ package com.gskinner.zoe.utils {
 		protected function handleSwfInit(event:Event):void {
 			getRegistrationPoint(); //Hides the registration point, if it exists
 			
-			bitmaps = [];
-			
 			currentCaptureFrame = 0;
 			startFrameRate = _startSwf.stage.frameRate;
 			_startSwf.stage.frameRate = 1000;
 			clip.gotoAndPlay(0);
-			
-			captureBounds = [];
 			
 			var variableFrameDimensions:Boolean = fileModel.selectedItem.variableFrameDimensions;
 			var reuseFrames:Boolean = fileModel.selectedItem.reuseFrames;
@@ -487,21 +481,15 @@ package com.gskinner.zoe.utils {
 			var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
 			var scale:Number = fileModel.selectedItem.scale;
 			
-			var row:Number = currentCaptureFrame / columnCount | 0;
-			var col:Number = currentCaptureFrame % columnCount | 0;
-			
-			var frameX:Number = (col * _frameCaptureWidth)-_frameCaptureWidth;
-			var frameY:Number = row * _frameCaptureHeight;
-			
-			var rect:Rectangle = new Rectangle(frameX, frameY, _frameCaptureWidth, _frameCaptureHeight);
+			var rect:Rectangle = new Rectangle(0, 0, _frameCaptureWidth, _frameCaptureHeight);
 			
 			//Capture just one frame here, we peice it together at the end.
-			var mtx2:Matrix = new Matrix();
-			mtx2.scale(scale, scale);
-			mtx2.translate(-_frameBounds.x, -_frameBounds.y);
+			var mtx:Matrix = new Matrix();
+			mtx.scale(scale, scale);
+			mtx.translate(-_frameBounds.x, -_frameBounds.y);
 			
 			var singleFrame:BitmapData = new BitmapData(_frameCaptureWidth, _frameCaptureHeight, true, 0xff0000);
-			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, _frameCaptureWidth, _frameCaptureHeight),true);
+			singleFrame.draw(swf, mtx, null, null, rect, true);
 			
 			var frameData:FrameData = new FrameData(singleFrame,currentCaptureFrame, clip.currentLabel);
 			frameData.registrationPoint = getRegistrationPoint();
@@ -787,9 +775,16 @@ package com.gskinner.zoe.utils {
 						point = frameData.point;
 						
 						var captureRect:Rectangle = captureBounds[i];
+						var ox:Number;
+						var oy:Number;
 						
-						var ox:Number = frameData.registrationPoint.x-captureRect.x-fileModel.selectedItem.exportPadding;
-						var oy:Number = frameData.registrationPoint.y-captureRect.y-fileModel.selectedItem.exportPadding;
+						if (fileModel.selectedItem.variableFrameDimensions) {
+							ox = frameData.registrationPoint.x-captureRect.x-fileModel.selectedItem.exportPadding;
+							oy = frameData.registrationPoint.y-captureRect.y-fileModel.selectedItem.exportPadding;
+						} else {
+							ox = frameData.registrationPoint.x-fileModel.selectedItem.frameBounds.x-fileModel.selectedItem.exportPadding;
+							oy = frameData.registrationPoint.y-fileModel.selectedItem.frameBounds.y-fileModel.selectedItem.exportPadding;
+						}
 						
 						//Round the Reg Points
 						ox = Math.round(ox);
@@ -797,7 +792,15 @@ package com.gskinner.zoe.utils {
 						
 						//Frame format: [x,y,w,h,index,regX,regY]
 						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
-							frames.push([0,0,rect.width, rect.height,frameData.actualIndex,ox,oy]);
+							frames.push([
+								0,
+								0,
+								rect.width,
+								rect.height,
+								frameData.actualIndex,
+								ox,
+								oy
+							]);
 						} else {
 							var frame:Array = [
 								point.x==0?point.x+padding:point.x+padding,
@@ -958,7 +961,7 @@ package com.gskinner.zoe.utils {
 						clip.gotoAndStop(frameIndex);
 						if (clip.numChildren != 0) {
 							//found frame
-							index = frameIndex;
+							index = frameIndex-1;
 							break out;
 						}
 					}
