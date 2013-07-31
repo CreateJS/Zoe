@@ -831,7 +831,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 						swfCapture.content.gotoAndPlay(selectedState.startFrame+1);
 						addEventListener(Event.EXIT_FRAME, watchStatePlaying);
 					} else {
-						swfCapture.content.gotoAndStop(selectedState.startFrame==1?0:selectedState.startFrame+1);
+						swfCapture.content.gotoAndStop(selectedState.startFrame+1);
 						playMode = PAUSE;
 					}
 				}

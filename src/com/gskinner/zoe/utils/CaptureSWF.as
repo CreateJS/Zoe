@@ -38,6 +38,7 @@ package com.gskinner.zoe.utils {
 	
 	import flash.display.BitmapData;
 	import flash.display.DisplayObject;
+	import flash.display.FrameLabel;
 	import flash.display.MovieClip;
 	import flash.display.PNGEncoderOptions;
 	import flash.display.Stage;
@@ -201,6 +202,9 @@ package com.gskinner.zoe.utils {
 		protected var _startSwf:SWFLoader;
 		
 		protected var source:String;
+		protected var _lastFrameLabel:String;
+		
+		protected var currentLabels:Vector.<FrameLabel>;
 	
 		/**
 		 * Created a new CaptureSwf instance.
@@ -285,10 +289,12 @@ package com.gskinner.zoe.utils {
 			var variableFrameDimensions:Boolean = fileModel.selectedItem.variableFrameDimensions;
 			var reuseFrames:Boolean = fileModel.selectedItem.reuseFrames;
 			
-			if ((variableFrameDimensions && !reuseFrames) || (variableFrameDimensions && reuseFrames)) {
+			if (variableFrameDimensions) {
 				captureVariableSizeFrames();
 			} else {
-				var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+				var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds.clone();
+				_frameBounds.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
+				
 				_frameCaptureWidth = _frameBounds.width;
 				_frameCaptureHeight = _frameBounds.height;
 				
@@ -356,7 +362,7 @@ package com.gskinner.zoe.utils {
 			
 			var singleFrame:BitmapData = new BitmapData(rect.width, rect.height, true, 0xff0000);
 			singleFrame.draw(swf, mtx2, null,null, new Rectangle(0,0, rect.width, rect.height),true);
-			var label:String = (clip.currentLabel == null) ? 'all' : clip.currentLabel;
+			var label:String = getLabel(currentCaptureFrame);
 			
 			var frameData:FrameData = new FrameData(singleFrame, currentCaptureFrame, label);
 			frameData.registrationPoint = getRegistrationPoint();
@@ -371,8 +377,38 @@ package com.gskinner.zoe.utils {
 			}
 		}
 		
+		protected function getLabel(index:uint):String {
+			// Always reset the labels when 0 is requested (probably a new swf)
+			if (index == 0) {
+				currentLabels = new Vector.<FrameLabel>();
+			}
+			
+			var i:uint, l:uint;
+				
+			// Normalize the currentLabels array
+			// Sometimes 0/1 are the same and the last 2 frames can be the same.
+			// This uses an 1 based index.
+			l = clip.currentLabels.length;
+			for (i=0;i<l;i++) {
+				var lbl:FrameLabel = clip.currentLabels[i];
+				var nextLbl:FrameLabel = clip.currentLabels[i+1];
+				if (nextLbl && lbl.name == nextLbl.name) {
+					continue;
+				}
+				currentLabels.push(lbl);
+			}
+		
+			l = currentLabels.length;
+			for (i=0;i<currentLabels.length;i++) {
+				if (currentLabels[i].frame == index-1) {
+					return currentLabels[i].name;
+				}
+			}
+			return null;
+		}
+		
 		/**
-		 * Builds a Rectangle list so we can run it though a frame packing program 
+		 * Builds a Rectangle list so we can run it through a frame packing program. 
 		 * 
 		 */
 		protected function buildRectList():void {
@@ -399,14 +435,15 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		public function getStates():Vector.<AnimationState> {
+			getLabel(0);
 			var states:Vector.<AnimationState> = new Vector.<AnimationState>();
-			var l:uint = frameCount+1;
+			var l:uint = currentLabels.length;
 			var stateHash:Object = {};
 			var count:Number = 0;
-			for (var i:uint=0;i<=l;i++) {
-				clip.gotoAndStop(i);
-				
-				var frameLabel:String = (clip.currentFrameLabel == null) ? 'all' : clip.currentFrameLabel;
+			
+			for (var i:uint=0;i<l;i++) {
+				var frame:FrameLabel = currentLabels[i];
+				var frameLabel:String = frame.name;
 				var frameLabelObject:Object
 				
 				if (frameLabel.indexOf('=') != -1) {
@@ -420,29 +457,10 @@ package com.gskinner.zoe.utils {
 				}
 				var label:String = frameLabelObject.label;
 				
-				//Not a label, so just add any actions and move on.
-				if (!('label' in frameLabelObject)) {
-					states[states.length-1].addActions(frameLabelObject);
-					continue;
-				}
-				
 				if (stateHash[label] != null) { continue; }
 				
-				var startIndex:uint;
-				var endIndex:uint;
-				
-				//Check to see if the next frame has a label.
-				//Theres a weird bug with frame 0 and 1 returning the same label, so try frame 2, if its actually 0.
-				clip.gotoAndStop(i==0?2:i+1);
-				var nextLabel:String = clip.currentFrameLabel;
-				
-				if (nextLabel != null) {
-					endIndex = startIndex = Math.max(0, i-1);
-				} else {
-					endIndex = findEndIndex(i+1, label);
-					startIndex = Math.max(0, i-1);
-					i = endIndex+1;
-				}				
+				var startIndex:int = Math.max(0, frame.frame-1);
+				var endIndex:uint = findEndIndex(frame.frame, label);
 				
 				stateHash[label] = true; 
 				
@@ -478,7 +496,8 @@ package com.gskinner.zoe.utils {
 		 * 
 		 */
 		protected function handleCaptureFrames(event:Event):void {
-			var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+			var _frameBounds:Rectangle = fileModel.selectedItem.frameBounds.clone();
+			_frameBounds.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
 			var scale:Number = fileModel.selectedItem.scale;
 			
 			var rect:Rectangle = new Rectangle(0, 0, _frameCaptureWidth, _frameCaptureHeight);
@@ -488,10 +507,10 @@ package com.gskinner.zoe.utils {
 			mtx.scale(scale, scale);
 			mtx.translate(-_frameBounds.x, -_frameBounds.y);
 			
-			var singleFrame:BitmapData = new BitmapData(_frameCaptureWidth, _frameCaptureHeight, true, 0xff0000);
+			var singleFrame:BitmapData = new BitmapData(rect.width, rect.height, true, 0xff0000);
 			singleFrame.draw(swf, mtx, null, null, rect, true);
 			
-			var frameData:FrameData = new FrameData(singleFrame,currentCaptureFrame, clip.currentLabel);
+			var frameData:FrameData = new FrameData(singleFrame,currentCaptureFrame, getLabel(currentCaptureFrame));
 			frameData.registrationPoint = getRegistrationPoint();
 			bitmaps.push(frameData);
 			
@@ -554,8 +573,7 @@ package com.gskinner.zoe.utils {
 					//If a frame is re-used the value will be an index of where to lookup the prev one.
 					if (!(bitmaps[i] is Number)) {
 						rect = (bitmaps[i] as FrameData).ref.rect;
-						rects.push(rect);
-						rectLookup[rect] = rects.length-1;
+						rectLookup[rect] = rects.push(rect)-1;
 					}
 				}
 			} else {
@@ -610,7 +628,7 @@ package com.gskinner.zoe.utils {
 					
 					currX += rect.width;
 					
-					if (currX + rect.width > requestedWidth) {
+					if (currX + rect.width >= requestedWidth) {
 						currY += rect.height;
 						currX = 0;
 					}
@@ -757,7 +775,8 @@ package com.gskinner.zoe.utils {
 			var animations:Object = {};
 			var padding:uint = fileModel.selectedItem.exportPadding;
 			
-			var origRect:Rectangle = fileModel.selectedItem.frameBounds;
+			var origRect:Rectangle = fileModel.selectedItem.frameBounds.clone();
+			origRect.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
 			
 			var framesDroppedCount:uint = 0;
 			
@@ -770,7 +789,6 @@ package com.gskinner.zoe.utils {
 					if (!(tempData is Number)) {
 						frameData = bitmaps[i];
 						rect = pointLookup[frameData.point];
-						rect.inflate(-fileModel.selectedItem.exportPadding, -fileModel.selectedItem.exportPadding);
 						
 						point = frameData.point;
 						
@@ -782,8 +800,8 @@ package com.gskinner.zoe.utils {
 							ox = frameData.registrationPoint.x-captureRect.x-fileModel.selectedItem.exportPadding;
 							oy = frameData.registrationPoint.y-captureRect.y-fileModel.selectedItem.exportPadding;
 						} else {
-							ox = frameData.registrationPoint.x-fileModel.selectedItem.frameBounds.x-fileModel.selectedItem.exportPadding;
-							oy = frameData.registrationPoint.y-fileModel.selectedItem.frameBounds.y-fileModel.selectedItem.exportPadding;
+							ox = frameData.registrationPoint.x-origRect.x-fileModel.selectedItem.exportPadding;
+							oy = frameData.registrationPoint.y-origRect.y-fileModel.selectedItem.exportPadding;
 						}
 						
 						//Round the Reg Points
@@ -834,7 +852,8 @@ package com.gskinner.zoe.utils {
 					animations[state.name] = animationDef;
 				}
 			} else {
-				var frameBounds:Rectangle = fileModel.selectedItem.frameBounds;
+				var frameBounds:Rectangle = fileModel.selectedItem.frameBounds.clone();
+				frameBounds.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
 				var registrationPoint:Point = (bitmaps[0] as FrameData).registrationPoint;
 				
 				frames = {
@@ -950,30 +969,30 @@ package com.gskinner.zoe.utils {
 		 */
 		protected function findEndIndex(startIndex:int, lastLabel:String):uint {
 			var index:Number = NaN;
-			var l:uint = frameCount;
-			out:for (var i:uint=startIndex;i<l;i++) {
-				clip.gotoAndStop(i);
-				var lbl:String = clip.currentFrameLabel;
-				if (lbl == null || lastLabel == lbl) { continue; }
-				if (lbl != null) {
-					var frameIndex:int = i;
-					while (frameIndex--) {
-						clip.gotoAndStop(frameIndex);
-						if (clip.numChildren != 0) {
-							//found frame
-							index = frameIndex-1;
-							break out;
-						}
-					}
+			for (var i:uint=0;i<currentLabels.length;i++) {
+				var frame:FrameLabel = currentLabels[i];
+				if (frame.frame > startIndex) {
+					// Minus 2 because Flash has 1 based frames + The frame labels always report as +1 off.
+					index = frame.frame-2;
+					break;
 				}
 			}
 			
-			if (clip.currentFrame == frameCount-1) {
-				return frameCount-1;
-			} else if (isNaN(index)) {
-				return startIndex;
+			// Check the previous frame, if its empty; index--;
+			if (index > 0) {
+				clip.gotoAndStop(frame.frame-1);
+				var regPoint:DisplayObject = clip.getChildByName('registrationPoint');
+				if (clip.numChildren == 0 || (regPoint != null && clip.numChildren == 1)) {
+					return index-1;
+				}
+			}
+			
+			if (isNaN(index)) {
+				return frameCount;
+			} else if (index == -1) {
+				return 0;
 			} else {
-				return index-1;
+				return index;
 			}
 		}
 		
