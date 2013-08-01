@@ -35,7 +35,7 @@ The view used to display the loaded swf, and its capture bounds.
 <s:SkinnableContainer xmlns:fx="http://ns.adobe.com/mxml/2009" backgroundColor="0xCCCCCC"
 					  xmlns:s="library://ns.adobe.com/flex/spark" creationComplete="init()"
 					  xmlns:mx="library://ns.adobe.com/flex/mx"
-					  resize="handleResize()" width="450" height="30" backgroundAlpha="0.75" >
+					  width="250" height="30" backgroundAlpha="0.75" >
 	
 	<fx:Script>
 		<![CDATA[
@@ -50,7 +50,6 @@ The view used to display the loaded swf, and its capture bounds.
 			
 			public var _selectedColor:int;
 			public var totalFrames:Number=0;
-			public var frameRate:Number=0;
 			
 			/**
 			 * @private
@@ -95,14 +94,6 @@ The view used to display the loaded swf, and its capture bounds.
 			 * @private
 			 * 
 			 */
-			protected function handleResize():void {
-				
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
 			protected function togglePlayClick():void {
 				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.PLAY_CLICKED));
 			}
@@ -130,23 +121,6 @@ The view used to display the loaded swf, and its capture bounds.
 			 */
 			protected function handleColorPickerMove():void {
 				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.COLOR_MOVE));
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function handleFrameRateChange():void {
-				frameRate = frameRateStep.value;
-				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.FRAME_RATE_CHANGED));
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
-			protected function handleFreqRateChange():void {
-				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.FREQUENCY_RATE_CHANGED));
 			}
 			
 			/**
@@ -185,14 +159,6 @@ The view used to display the loaded swf, and its capture bounds.
 			 * @private
 			 * 
 			 */
-			protected function handleStateChange():void {
-				dispatchEvent(new PreviewPanelEvent(PreviewPanelEvent.CHANGE_STATE));
-			}
-			
-			/**
-			 * @private
-			 * 
-			 */
 			protected function formatStateLabel(value:Object):String {
 				return value == null?'':value.name;
 			}
@@ -207,10 +173,9 @@ The view used to display the loaded swf, and its capture bounds.
 			
 		]]>
 	</fx:Script>
+	
 	<s:HGroup width="100%" paddingTop="5" paddingLeft="5" paddingRight="5">
 			<s:ToggleButton width="24" height="24" id="playPauseBtn" skinClass="com.gskinner.zoe.skins.PlayPauseButton" click="togglePlayClick()" />
-			<s:Label text="fps" paddingTop="5"/>
-			<s:NumericStepper id="frameRateStep" minimum="1" maximum="60" width="40" value="24" change="handleFrameRateChange()" />
 			<s:VGroup paddingTop="5" width="100%">
 				<s:HSlider  id="frameSlider" snapInterval="1" width="100%" dataTipFormatFunction="formatFrameSliderLabel" 
 							change="updatePreviewFramePosition()" 
@@ -221,8 +186,6 @@ The view used to display the loaded swf, and its capture bounds.
 						 focusIn="handleSliderStartChange()" 
 						 focusOut="handleSliderEndChange()" 
 						 enter="updateSliderPosition()" />
-			<s:DropDownList id="stateList" width="150" labelFunction="formatStateLabel" change="handleStateChange()"  />
-			<s:Button id="statesListHelpBtn" styleName="helpButton" useHandCursor="true" buttonMode="true" />
 			<mx:ColorPicker id="bgColor" styleName="bgColorPicker" open="handleBackgroundColorOpen()" change="handleBgColorChange()" 
 							mouseOver="handleColorPickerMove()" itemRollOver="handleColorPickerMove()"  />
 	</s:HGroup>

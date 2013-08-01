@@ -135,6 +135,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected var selectedState:AnimationState;
 			
 			/**
+			 * @private
+			 * 
+			 */
+			protected var currentAnimation:AnimationState;
+			
+			/**
 			 * Loads an array of swfs in, probably from a drag and drop.
 			 * 
 			 */
@@ -210,13 +216,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				dataExportList.dataProvider = new ArrayList ([
 																{label:'JSON', type:ExportType.DATA_JSON},
+																{label:'JSONP', type:ExportType.DATA_JSONP},
 																{label:'None', type:ExportType.NONE}
 															]);
 				
 				//Add add some help tooltips
 				maintainPowHelpBtn.toolTip = "Will trim spritesheet images to the smallest power of 2 dimensions possible based on the content.";
 				exportSizesHelpBtn.toolTip = "SpriteSheet: Exports one or more images (based on available size) with multiple frames on each image.\nFrames: Exports individual PNG's for each frame.";
-				previewPanel.statesListHelpBtn.toolTip = "If your swf has its states labeled using frame labels, they will be displayed here.";
 				exportJsonHelpBtn.toolTip = "Exports a JSON file that defines your animations, for use with EaselJS.";
 				numFramesHelp.toolTip = "Total number of frames to export, starting from 0, setting to 0 will export everything.";
 				refreshBtn.toolTip = "Reloads your swf from disk, if you have changed it.";
@@ -227,8 +233,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 				scaleHelpBtn.toolTip = "Scale the spritesheet for export."
 				thresholdHelpBtn.toolTip = "Adjusting the scaling magnitude or intensity in which frames are to be compared for export.";
 				variableFrameDimensionsHelpBtn.toolTip = "Performs rectangle packing optimizing sizing for sprites.";
-				statesDataProvider = new ArrayList();
-				previewPanel.stateList.dataProvider = statesDataProvider;
+				
+				animationsListHelpBtn.toolTip = "Lists all the animations contained in your swf file.  This we be exported to the JSON.";
+				speedStepHelpBtn.toolTip = "Defines the playback speed for this animation. The preview will only be an approximation.";
+				animationsNextListHelpBtn.toolTip = "Defines the default animation to play next. You can chain animation toegther to play them in any order.";
+				fpsHelpBtn.toolTip = "The default framerate to use for all animations.";
 				
 				exportView.invalidateDisplayList();
 				
@@ -241,10 +250,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				previewPanel.addEventListener(PreviewPanelEvent.COLOR_CHANGED, handleBgColorChange, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.COLOR_OPEN, handleBackgroundColorOpen, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.COLOR_MOVE, handleColorPickerMove, false, 0, true);
-				previewPanel.addEventListener(PreviewPanelEvent.CHANGE_STATE, handleStateChange, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.CHANGE_START_FRAME_POSITION, handleSliderStartChange, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.CHANGE_END_FRAME_POSITION, handleSliderEndChange, false, 0, true);
-				previewPanel.addEventListener(PreviewPanelEvent.FRAME_RATE_CHANGED, handleFrameRateChange, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.PLAY_CLICKED, togglePlayClick, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.UPDATE_FRAME_POSITION, handlePreviewFramePosition, false, 0, true);
 				previewPanel.addEventListener(PreviewPanelEvent.UPDATE_SLIDER_POSITION, updateSliderPosition, false, 0, true);
@@ -279,7 +286,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleCaptureBegin(event:CaptureEvent):void {
-				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				swfCapture.visible = false;
 				ExportDialog.show();
 			}
@@ -316,7 +323,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					CallLater.call(findBounds, 2);
 				}
 				
-				statesDataProvider.removeAll();
+				statesDataProvider = new ArrayList();
 				statesDataProvider.addItem({name:'-- Play All --'});
 				
 				swfCaptureUtil.updateSWF(swfCapture.swfLoader, fileModel.selectedItem.sourcePath);
@@ -327,8 +334,57 @@ OTHER DEALINGS IN THE SOFTWARE.
 					statesDataProvider.addItem(state);
 				}
 				
-				previewPanel.stateList.selectedIndex = 0;
-				stateChange();
+				var animationsDataProvider:ArrayList = new ArrayList(statesDataProvider.source);
+				animationsDataProvider.removeItemAt(0);
+				animationsDataProvider.addItemAt({name:'-- none --'}, 0);
+				animationsNextList.dataProvider = statesDataProvider;
+				animationsList.dataProvider = statesDataProvider;
+				animationsList.selectedIndex = 1;
+				
+				// Populate the defaults
+				var nextAnim:String = fileModel.selectedItem.getNextAnimationName(animationsList.selectedItem.name);
+				animationsNextList.selectedIndex = getIndexOfName(animationsDataProvider, nextAnim);
+				speedStep.value = fileModel.selectedItem.getAnimationSpeed(animationsList.selectedItem.name);
+				
+				updateAnimationTab();
+				handleStateChange(null);
+			}
+			
+			protected function getIndexOfName(list:ArrayList, name:String):int {
+				for (var i:uint=0;i<list.length;i++) {
+					if (list.getItemAt(i).name == name) {
+						return i;
+					}
+				}
+				return 0;
+			}
+			
+			/* 
+			 * @private
+			 * 
+			 * Called when values in the Animations tab change.
+			 * 
+			 */
+			protected function handleAnimationsChange(event:Event):void {
+				if (event.target == animationsList) {
+					speedStep.value = fileModel.selectedItem.getAnimationSpeed(animationsList.selectedItem.name);
+					animationsNextList.selectedIndex = getIndexOfName(animationsNextList.dataProvider as ArrayList, animationsList.selectedItem.next);
+				} else if (event.target == animationsNextList) {
+					animationsList.selectedItem.next = animationsNextList.selectedItem is AnimationState?animationsNextList.selectedItem.name:null; 
+				}
+				
+				updateAnimationTab();
+				
+				callLater(handleStateChange, [null]);
+			}
+			
+			protected function updateAnimationTab():void {
+				if (animationsList.selectedItem) {
+					fileModel.selectedItem.setAnimationData(animationsList.selectedItem.name, animationsNextList.selectedItem is AnimationState?animationsNextList.selectedItem.name:null, speedStep.value);
+					fileModel.saveState();
+				}
+				
+				speedFpsDisplay.text = '('+(frameRateStep.value*speedStep.value).toFixed(2)+' fps)';
 			}
 			
 			/**
@@ -342,7 +398,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				ProgressOverlay.show('Calculating bounds');
 				
 				//We could be in an state preview, so stop that for now (we'll re-enable after the find bounds is complete).
-				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				var findBounds:FindSWFBounds = new FindSWFBounds(swfCapture.content, fileModel.selectedItem.frameCount, swfCapture.scale);
 				findBounds.addEventListener(Event.COMPLETE, handleFoundBounds);
 				findBounds.findBounds();
@@ -376,7 +432,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleListChange(event:Event):void {
-				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				
 				callLater(this.handleFileListChange, [null]);
 				
@@ -392,6 +448,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					destinationTxt.text = '';
 					reuseFramesChk.selected = false;
 					swfCapture.scale = 1;
+					frameRateStep.value = 24;
 					
 					dataExportList.selectedIndex = 0;
 					imageExportList.selectedIndex = 0;
@@ -420,8 +477,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 					
 					maintainPow2Chk.selected = item.maintainPow2;
 					
+					frameRateStep.value = item.fps;
+					
 					imageExportList.selectedIndex = getListItemIndexByType(imageExportList.dataProvider as ArrayList, item.imageExportType);
 					dataExportList.selectedIndex = getListItemIndexByType(dataExportList.dataProvider as ArrayList, item.dataExportType);
+					jsonpCallbackName.visible = jsonpCallbackName.includeInLayout = (item.dataExportType == ExportType.DATA_JSONP);
+					jsonpCallbackName.text = item.jsonpCallback;
 					
 					var bitmapWidth:Number = item.bitmapWidth || 0;
 					var bitmapHeight:Number = item.bitmapHeight || 0;
@@ -442,6 +503,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 					updateUI(swfCapture.captureBounds);
 					updateViewFromColorChange();
 				}
+				
+				handleFrameRateChange();
 			}
 			
 			/**
@@ -572,6 +635,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected function updatePreviewFramePosition():void {
 				previewPanel.totalFrames = (swfCapture != null?swfCapture.totalFrames:0)
 				swfCapture.gotoAndStop(previewPanel.frameSlider.value);
+				updatePreviewBounds(null);
 			}
 			
 			/**
@@ -615,6 +679,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 					swfCapture.play();
 				} else if (swfCapture) {
 					swfCapture.stop();
+				}
+				
+				if (playMode == PLAY) {
+					handleStateChange(null);
+				} else {
+					removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				}
 				
 				updateLiveBoundsUpdate();
@@ -691,15 +761,21 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * @private
 			 * 
 			 */
-			protected function handleFrameRateChange(event:PreviewPanelEvent):void {
-				stage.frameRate = previewPanel.frameRate;
+			protected function handleFrameRateChange():void {
+				if (!currentAnimation) {
+					stage.frameRate = frameRateStep.value;
+				} else {
+					stage.frameRate = Math.max(1, currentAnimation.speed * frameRateStep.value);
+				}
+				
+				fileModel.selectedItem.fps = frameRateStep.value;
+				updateAnimationTab();
 			}
 			
 			/**
 			 * @private
 			 * 
 			 */
-			
 			protected function handleBgColorChange(event:PreviewPanelEvent):void {
 				var alphaBtn:ToggleButton = ColorPreviewText.getInstance().toggleTransparencyButton;
 				alphaBtn.selected = false;
@@ -816,24 +892,27 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			
 			protected function stateChange():void {
-				removeEventListener(Event.EXIT_FRAME, watchStatePlaying);
+				removeEventListener(Event.ENTER_FRAME, watchStatePlaying);
 				playMode = PLAY;
 			}
 			
 			protected function handleStateChange(event:PreviewPanelEvent):void {
-				stateChange();
-				
 				if (swfCapture.content == null) { return; }
 				
-				if (previewPanel.stateList.selectedItem is AnimationState) {
-					selectedState = previewPanel.stateList.selectedItem;
-					if (selectedState.startFrame != selectedState.endFrame && selectedState.startFrame+1 != selectedState.endFrame) {
-						swfCapture.content.gotoAndPlay(selectedState.startFrame+1);
-						addEventListener(Event.EXIT_FRAME, watchStatePlaying);
-					} else {
-						swfCapture.content.gotoAndStop(selectedState.startFrame+1);
-						playMode = PAUSE;
-					}
+				if (animationsList.selectedItem is AnimationState) {
+					animationsList.selectedItem.speed = speedStep.value;
+				}
+				
+				if (animationsList.selectedItem is AnimationState) {
+					selectedState = animationsList.selectedItem;
+					animationsList.selectedIndex = getIndexOfName(animationsList.dataProvider as ArrayList, selectedState.name);
+					
+					currentAnimation = selectedState;
+					stage.frameRate = Math.max(1, currentAnimation.speed * frameRateStep.value);
+					
+					swfCapture.content.gotoAndStop(selectedState.startFrame+1);
+					addEventListener(Event.ENTER_FRAME, watchStatePlaying);
+					previewPanel.playPauseBtn.selected = true;
 				}
 			}
 			
@@ -842,8 +921,27 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function watchStatePlaying(event:Event):void {
-				if (swfCapture.content.currentFrame == selectedState.endFrame+1) {
-					swfCapture.content.gotoAndPlay(selectedState.startFrame+1);
+				if (variableFrameDimensions.selected) {
+					callLater(updatePreviewBounds, [null]);
+				}
+				
+				var nextArrayList:ArrayList = animationsNextList.dataProvider as ArrayList;
+				var nextIndex:int = getIndexOfName(nextArrayList, currentAnimation.next);
+				
+				if (nextIndex > -1) {
+					var next:AnimationState = nextArrayList.getItemAt(nextIndex) as AnimationState;
+				}
+				
+				if (swfCapture.content.currentFrame == currentAnimation.endFrame+1) {
+					if (next) {
+						currentAnimation = next;
+						stage.frameRate = Math.max(1, currentAnimation.speed * frameRateStep.value);
+						swfCapture.content.gotoAndStop(next.startFrame+1);
+					} else {
+						swfCapture.content.gotoAndStop(currentAnimation.startFrame+1);
+					}
+				} else {
+					swfCapture.content.gotoAndStop(swfCapture.content.currentFrame+1);
 				}
 			}
 			
@@ -963,7 +1061,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				var value:Boolean;
 				if (event.target is DropDownList) {
 					var option:String = ((event.target as DropDownList).selectedItem).type;
-				} else {
+				} else if (event.target is CheckBox) {
 					value = (event.target as CheckBox).selected;
 				}
 				
@@ -981,9 +1079,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 						break;
 					case dataExportList:
 						fileModel.selectedItem.dataExportType = option;
+						jsonpCallbackName.visible = jsonpCallbackName.includeInLayout = (option == ExportType.DATA_JSONP);
 						break;
 					case imageExportList:
 						fileModel.selectedItem.imageExportType = option;
+						break;
+					case jsonpCallbackName:
+						fileModel.selectedItem.jsonpCallback = jsonpCallbackName.text.length == 0?'callback':jsonpCallbackName.text;
 						break;
 				}
 				
@@ -1078,6 +1180,33 @@ OTHER DEALINGS IN THE SOFTWARE.
 			</s:HGroup>
 		</s:NavigatorContent>
 		
+		<!-- Animations View -->
+		<s:NavigatorContent id="animationsView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
+			<s:layout>
+				<s:VerticalLayout />
+			</s:layout>
+			<s:HGroup>
+				<s:RichText text="Animation" styleName="contentText" width="{animationsList.width+13+animationsListHelpBtn.width}" />
+				<s:RichText text="Speed" styleName="contentText" width="{speedStep.width+23+speedStepHelpBtn.width+speedFpsDisplay.width}" />
+				<s:RichText text="Next" styleName="contentText" width="{animationsNextList.width+animationsNextListHelpBtn.width+13}" />
+				<s:RichText text="fps" styleName="contentText" />
+			</s:HGroup>
+			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
+				<s:DropDownList id="animationsList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
+				<s:Button id="animationsListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:NumericStepper id="speedStep" change="handleAnimationsChange(event);" stepSize=".1" minimum="0" maximum="100" width="45" />
+				<s:RichText id="speedFpsDisplay" styleName="smallText" paddingTop="10" />
+				<s:Button id="speedStepHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:DropDownList id="animationsNextList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
+				<s:Button id="animationsNextListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:NumericStepper id="frameRateStep" minimum="1" maximum="60" width="45" value="24" change="handleFrameRateChange()" />
+				<s:Button id="fpsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+			</s:HGroup>
+		</s:NavigatorContent>
+		
 		<!-- Bounds View -->
 		<s:NavigatorContent id="boundsView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
 			<s:layout>
@@ -1087,7 +1216,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			<s:HGroup id="boundsLabelView" gap="10" width="100%">
 				<s:RichText text="Image Bounds" styleName="contentText" />
 				<mx:Spacer width="311" />
-				<s:RichText text="Reuse Frames" width="100" styleName="contentText" />
+				<s:RichText text="Reuse Frames" width="{threshold.width+reuseFramesChk.width+thresholdLbl.width+thresholdHelpBtn.width+25}" styleName="contentText" />
 			</s:HGroup>
 			
 			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
@@ -1108,8 +1237,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 				</s:HGroup>
 				<s:TextInput id="thresholdLbl" restrict="[0-9]" width="35" enabled="{threshold.enabled}" enter="handleToleranceEnter()" />
 				<s:Button id="thresholdHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<mx:Spacer width="10" />
-				
 			</s:HGroup>
 		</s:NavigatorContent>
 		
@@ -1128,16 +1255,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:NumericStepper id="numFramesStep" width="50" height="20" maximum="999" change="handleNumFramesStepChange()" />
 				<s:Label text="frames" />
 				<s:Button id="numFramesHelp" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:Label text="Image format " verticalAlign="middle" height="18" paddingTop="3" />
 				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
 				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				<s:CheckBox id="maintainPow2Chk" label="Trim" change="handleExportPow2Change();" />
 				<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				<s:Label text="Data format " verticalAlign="middle" height="18" paddingTop="3" />
 				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
+				<s:TextInput id="jsonpCallbackName" includeInLayout="false" visible="false" width="85" change="handleExportFormatChange(event);" />
 				<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 			</s:HGroup>
 		</s:NavigatorContent>
+		
 	</mx:ViewStack>
 	
 	<ui:Divider width="100%" height="2" color="0x666666" />

@@ -46,11 +46,17 @@ package com.gskinner.zoe.data {
 		public static const IMAGE_SPRITE_SHEET:String = 'imageSheet';
 		
 		/**
-		 * When set Zoe will export JSON stub code for Easel.
+		 * When set, Zoe will export JSON stub code for Easel.
 		 * @see http://www.easeljs.com
 		 * 
 		 */
 		public static const DATA_JSON:String  = 'dataJson';
+		
+		/**
+		 * Will export JSON data, but wrap the result in a JSONP callback. 
+		 * 
+		 */
+		public static const DATA_JSONP:String  = 'dataJsonp';
 		
 		/**
 		 * When set Zoe will export no data.

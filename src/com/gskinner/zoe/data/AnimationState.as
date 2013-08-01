@@ -58,7 +58,9 @@ package com.gskinner.zoe.data {
 		 */
 		public var endFrame:uint;
 		
-		protected var _actions:Object;
+		public var speed:Number;
+		
+		public var next:String;
 		
 		/**
 		 * Creates a new AnimtaionState instance.
@@ -68,28 +70,12 @@ package com.gskinner.zoe.data {
 		 * @param endFrame The 0 based end frame of this state.
 		 * 
 		 */
-		public function AnimationState(name:String, startFrame:uint, endFrame:uint) {
+		public function AnimationState(name:String, startFrame:uint, endFrame:uint, next:String, speed:Number) {
 			this.name = name;
 			this.startFrame = startFrame;
 			this.endFrame = endFrame;
-			
-			_actions = {};
-		}
-		
-		public function get frequency():Number {
-			return isNaN(_actions.frequency)?NaN:Number(_actions.frequency);
-		}
-		
-		public function get next():String {
-			return _actions.next;
-		}
-		
-		
-		public function addActions(value:Object):void {
-			for (var n:String in value) {
-				if (n == "label") { continue; }
-				_actions[n] = value[n];
-			}
+			this.next = next;
+			this.speed = speed;
 		}
 	}
 }

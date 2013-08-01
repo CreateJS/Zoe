@@ -444,30 +444,18 @@ package com.gskinner.zoe.utils {
 			for (var i:uint=0;i<l;i++) {
 				var frame:FrameLabel = currentLabels[i];
 				var frameLabel:String = frame.name;
-				var frameLabelObject:Object
 				
-				if (frameLabel.indexOf('=') != -1) {
-					try { //wdg:: try catch, just incase a incorrect string slips in.
-						frameLabelObject = new URLVariables(frameLabel);
-					} catch (e:*) {
-						frameLabelObject = {label:frameLabel};
-					}
-				} else {
-					frameLabelObject = {label:frameLabel};
-				}
-				var label:String = frameLabelObject.label;
-				
-				if (stateHash[label] != null) { continue; }
+				if (stateHash[frameLabel] != null) { continue; }
 				
 				var startIndex:int = Math.max(0, frame.frame-1);
-				var endIndex:uint = findEndIndex(frame.frame, label);
+				var endIndex:uint = findEndIndex(frame.frame, frameLabel);
 				
-				stateHash[label] = true; 
+				stateHash[frameLabel] = true; 
 				
-				var state:AnimationState = new AnimationState(label, startIndex, endIndex);
-				if (frameLabelObject) {
-					state.addActions(frameLabelObject);
-				}
+				var speed:Number = fileModel.selectedItem.getAnimationSpeed(frameLabel);
+				var next:String = fileModel.selectedItem.getNextAnimationName(frameLabel);
+				
+				var state:AnimationState = new AnimationState(frameLabel, startIndex, endIndex, next, speed);
 				states.push(state);
 			}
 			
@@ -623,6 +611,9 @@ package com.gskinner.zoe.utils {
 					positions.push(pt);
 					pointLookup[pt] = rect;
 					
+					rect = rect.clone();
+					rect.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
+					
 					sheetWidth = Math.max(sheetWidth, currX + rect.width);
 					sheetHeight = Math.max(sheetHeight, currY + rect.height);
 					
@@ -737,7 +728,7 @@ package com.gskinner.zoe.utils {
 				}
 			}
 			
-			if (fileModel.selectedItem.dataExportType == ExportType.DATA_JSON) {
+			if (fileModel.selectedItem.dataExportType == ExportType.DATA_JSON || fileModel.selectedItem.dataExportType == ExportType.DATA_JSONP) {
 				result = buildJSON();
 				
 				saveFile = new File(fileModel.selectedItem.destinationPath + '/'+fileModel.selectedItem.name + '.json');
@@ -821,8 +812,8 @@ package com.gskinner.zoe.utils {
 							]);
 						} else {
 							var frame:Array = [
-								point.x==0?point.x+padding:point.x+padding,
-								point.y==0?point.y+padding:point.y+padding,
+								point.x+padding,
+								point.y+padding,
 								rect.width,
 								rect.height,
 								frameData.sheetIndex,
@@ -846,8 +837,8 @@ package com.gskinner.zoe.utils {
 					if (state.next != null) {
 						animationDef.next = state.next;
 					}
-					if (!isNaN(state.frequency)) {
-						animationDef.frequency =  state.frequency;
+					if (state.speed > 0) {
+						animationDef.speed =  state.speed;
 					}
 					animations[state.name] = animationDef;
 				}
@@ -857,8 +848,8 @@ package com.gskinner.zoe.utils {
 				var registrationPoint:Point = (bitmaps[0] as FrameData).registrationPoint;
 				
 				frames = {
-					width:frameBounds.width, 
-					height:frameBounds.height, 
+					width:frameBounds.width,
+					height:frameBounds.height,
 					regX:(registrationPoint) ? registrationPoint.x: 0,
 					regY:(registrationPoint) ? registrationPoint.y: 0,
 					count:frameCount
@@ -867,12 +858,6 @@ package com.gskinner.zoe.utils {
 				for(i=0;i<statesCount;i++) {
 					state = states[i];
 					var frameDef:Array = [state.startFrame, state.endFrame];
-					if (state.next != null || !isNaN(state.frequency)) {
-						frameDef.push(state.next);
-					}
-					if (!isNaN(state.frequency)) {
-						frameDef.push(state.frequency);
-					}
 					animations[state.name] = frameDef;
 				}
 			}
@@ -880,13 +865,26 @@ package com.gskinner.zoe.utils {
 			var startFrames:Number = frames.length + framesDroppedCount;
 			var currentFrames:Number = frames.length;
 			
-			var jsonData:Object = {}
-			jsonData.frames = frames;
-			jsonData.animations = animations;
-			jsonData.images = exportedImageNames;
+			// Manually encode each value, so we can maintain order during export.
+			var jsonData:Array = [
+				{label:'framerate', data:fileModel.selectedItem.fps},
+				{label:'images', data:exportedImageNames},
+				{label:'frames', data:frames},
+				{label:'animations', data:animations}
+			];
 			
-			//We don't use the default JSON object, because here we can create a pretty output.
-			var jsonString:String = com.maccherone.json.JSON.encode(jsonData, true, 500);
+			var json:Array = [];
+			//Use com.maccherone.json.JSON, to export pretty data.
+			for (i=0;i<jsonData.length;i++) {
+				var jsonString:String = com.maccherone.json.JSON.encode(jsonData[i].data, true);
+				json.push(com.maccherone.json.JSON.encode(jsonData[i].label) + ':' + jsonString);
+			}
+			
+			jsonString = '{\n'+json.join(',\n') +'\n}';
+			
+			if (fileModel.selectedItem.dataExportType == ExportType.DATA_JSONP) {
+				jsonString = fileModel.selectedItem.jsonpCallback + '(' + jsonString + ');';
+			}
 			
 			return {json:jsonString, startFrames:startFrames, currentFrames:currentFrames, droppedFrames:framesDroppedCount};
 		}

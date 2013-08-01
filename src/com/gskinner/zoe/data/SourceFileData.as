@@ -95,6 +95,11 @@ package com.gskinner.zoe.data {
 		public var dataExportType:String;
 		
 		/**
+		 * Specfies the name of the callback used when exporting jsonp
+		 */
+		public var jsonpCallback:String = 'callback';
+		
+		/**
 		 * Specifies threshold level for comparing Bitmapdata.
 		 */
 		public var threshold:Number;
@@ -108,6 +113,11 @@ package com.gskinner.zoe.data {
 		 * Flag to always export image with pow(2,n) sizes.
 		 */
 		public var maintainPow2:Boolean;
+		
+		/**
+		 * What fps our Spritesheet should be exported with.
+		 */
+		public var fps:Number = 24;
 		
 		/**
 		 * @private
@@ -129,6 +139,8 @@ package com.gskinner.zoe.data {
 		 */
 		public var isDirty:Boolean = true;
 		
+		protected var _animations:Object;
+		
 		/**
 		 * Creates a new SourceFileData instance
 		 * 
@@ -141,6 +153,7 @@ package com.gskinner.zoe.data {
 			exportPadding = 2;
 			frameCount = 0;
 			scale = 1;
+			_animations = {};
 			
 			//Set the default image size
 			bitmapHeight = bitmapWidth = 2048;
@@ -172,6 +185,22 @@ package com.gskinner.zoe.data {
 			return unescapeMultiByte(_destinationPath);
 		}
 		
+		public function getNextAnimationName(label:String):String {
+			return _animations[label] == null?null:_animations[label].next;
+		}
+		
+		public function getAnimationSpeed(label:String):Number {
+			return _animations[label] == null?1:_animations[label].speed; 
+		}
+		
+		public function setAnimationData(anim:String, next:String, speed:Number):void {
+			var value:Object = this._animations[anim] || {};
+			value.next = next;
+			value.speed = speed;
+			
+			this._animations[anim] = value;
+		}
+		
 		/**
 		 * Convert to an generic object, so we can save as AMF to the file system.
 		 * 
@@ -190,9 +219,12 @@ package com.gskinner.zoe.data {
 				sourcePath:sourcePath,
 				name:name,
 				threshold:threshold,
+				jsonpCallback:jsonpCallback,
 				
 				imageExportType:imageExportType,
 				dataExportType:dataExportType,
+				fps:fps,
+				animations:_animations,
 				
 				reuseFrames:reuseFrames,
 				variableFrameDimensions:variableFrameDimensions,
@@ -227,6 +259,9 @@ package com.gskinner.zoe.data {
 			imageExportType = value.imageExportType || ExportType.IMAGE_SPRITE_SHEET;
 			scale = value.scale || 1;
 			maintainPow2 = value.maintainPow2 || true;
+			jsonpCallback = value.jsonpCallback || 'callback';
+			fps = isNaN(value.fps)?24:value.fps;
+			_animations = value.animations || {};
 		}
 	}
 }

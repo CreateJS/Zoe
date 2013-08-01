@@ -47,6 +47,12 @@
 	color: #555555;
 }
 
+.smallText {
+	fontFamily: contentFont;
+	fontSize: 10;
+	color: #555555;
+}
+
 .formText {
 	fontFamily: contentFont;
 	fontSize: 12;
