@@ -139,6 +139,12 @@ package com.gskinner.zoe.data {
 		 */
 		public var isDirty:Boolean = true;
 		
+		/**
+		 * @private
+		 * 
+		 */
+		public var basePath:String;
+		
 		protected var _animations:Object;
 		
 		/**
@@ -230,6 +236,7 @@ package com.gskinner.zoe.data {
 				variableFrameDimensions:variableFrameDimensions,
 				frameCount:frameCount,
 				maintainPow2:maintainPow2,
+				basePath:basePath,
 				isDirty:isDirty
 			}
 			
@@ -262,6 +269,7 @@ package com.gskinner.zoe.data {
 			jsonpCallback = value.jsonpCallback || 'callback';
 			fps = isNaN(value.fps)?24:value.fps;
 			_animations = value.animations || {};
+			basePath = value.basePath || '';
 		}
 	}
 }

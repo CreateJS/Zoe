@@ -69,8 +69,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			protected function init():void{
 				tabDp = new ArrayList();
 				tabDp.addItem({label: 'Source'});
-				tabDp.addItem({label: 'Animations'});
 				tabDp.addItem({label: 'Settings'});
+				tabDp.addItem({label: 'Animations'});
 				tabDp.addItem({label: 'Export'});
 				viewMenu.dataProvider = tabDp; 
 			}

@@ -865,6 +865,13 @@ package com.gskinner.zoe.utils {
 			var startFrames:Number = frames.length + framesDroppedCount;
 			var currentFrames:Number = frames.length;
 			
+			// If needed add in our images base path;
+			if (fileModel.selectedItem.basePath) {
+				for (i=0;i<exportedImageNames.length;i++) {
+					var path:String = exportedImageNames[i];
+					exportedImageNames[i] = fileModel.selectedItem.basePath+path;
+				}
+			}
 			// Manually encode each value, so we can maintain order during export.
 			var jsonData:Array = [
 				{label:'framerate', data:fileModel.selectedItem.fps},

@@ -235,9 +235,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 				variableFrameDimensionsHelpBtn.toolTip = "Performs rectangle packing optimizing sizing for sprites.";
 				
 				animationsListHelpBtn.toolTip = "Lists all the animations contained in your swf file.  This we be exported to the JSON.";
-				speedStepHelpBtn.toolTip = "Defines the playback speed for this animation. The preview will only be an approximation.";
+				speedStepHelpBtn.toolTip = "Defines the playback speed for this animation. This value is multiplied by the fps setting. The preview will only be an approximation.";
 				animationsNextListHelpBtn.toolTip = "Defines the default animation to play next. You can chain animation toegther to play them in any order.";
 				fpsHelpBtn.toolTip = "The default framerate to use for all animations.";
+				basePathHelpBtn.toolTip = "Appends a path on to each image during export.";
 				
 				exportView.invalidateDisplayList();
 				
@@ -345,6 +346,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				var nextAnim:String = fileModel.selectedItem.getNextAnimationName(animationsList.selectedItem.name);
 				animationsNextList.selectedIndex = getIndexOfName(animationsDataProvider, nextAnim);
 				speedStep.value = fileModel.selectedItem.getAnimationSpeed(animationsList.selectedItem.name);
+				
+				basePathTxt.text = fileModel.selectedItem.basePath;
 				
 				updateAnimationTab();
 				handleStateChange(null);
@@ -858,6 +861,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 				fileModel.selectedItem.dataExportType = option;
 			}
 			
+			protected function handleBasePathChange():void {
+				fileModel.selectedItem.basePath = basePathTxt.text;
+				fileModel.saveState();
+			}
+			
 			/**
 			 * @private
 			 * 
@@ -1180,34 +1188,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			</s:HGroup>
 		</s:NavigatorContent>
 		
-		<!-- Animations View -->
-		<s:NavigatorContent id="animationsView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
-			<s:layout>
-				<s:VerticalLayout />
-			</s:layout>
-			<s:HGroup>
-				<s:RichText text="Animation" styleName="contentText" width="{animationsList.width+13+animationsListHelpBtn.width}" />
-				<s:RichText text="Speed" styleName="contentText" width="{speedStep.width+23+speedStepHelpBtn.width+speedFpsDisplay.width}" />
-				<s:RichText text="Next" styleName="contentText" width="{animationsNextList.width+animationsNextListHelpBtn.width+13}" />
-				<s:RichText text="fps" styleName="contentText" />
-			</s:HGroup>
-			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
-				<s:DropDownList id="animationsList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
-				<s:Button id="animationsListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				
-				<s:NumericStepper id="speedStep" change="handleAnimationsChange(event);" stepSize=".1" minimum="0" maximum="100" width="45" />
-				<s:RichText id="speedFpsDisplay" styleName="smallText" paddingTop="10" />
-				<s:Button id="speedStepHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				
-				<s:DropDownList id="animationsNextList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
-				<s:Button id="animationsNextListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				
-				<s:NumericStepper id="frameRateStep" minimum="1" maximum="60" width="45" value="24" change="handleFrameRateChange()" />
-				<s:Button id="fpsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-			</s:HGroup>
-		</s:NavigatorContent>
-		
-		<!-- Bounds View -->
+		<!-- Settings View -->
 		<s:NavigatorContent id="boundsView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
 			<s:layout>
 				<s:VerticalLayout />
@@ -1217,6 +1198,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:RichText text="Image Bounds" styleName="contentText" />
 				<mx:Spacer width="311" />
 				<s:RichText text="Reuse Frames" width="{threshold.width+reuseFramesChk.width+thresholdLbl.width+thresholdHelpBtn.width+25}" styleName="contentText" />
+				<s:RichText text="fps" styleName="contentText" />
 			</s:HGroup>
 			
 			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
@@ -1237,6 +1219,32 @@ OTHER DEALINGS IN THE SOFTWARE.
 				</s:HGroup>
 				<s:TextInput id="thresholdLbl" restrict="[0-9]" width="35" enabled="{threshold.enabled}" enter="handleToleranceEnter()" />
 				<s:Button id="thresholdHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:NumericStepper id="frameRateStep" minimum="1" maximum="60" width="45" value="24" change="handleFrameRateChange()" />
+				<s:Button id="fpsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+			</s:HGroup>
+		</s:NavigatorContent>
+		
+		<!-- Animations View -->
+		<s:NavigatorContent id="animationsView" width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
+			<s:layout>
+				<s:VerticalLayout />
+			</s:layout>
+			<s:HGroup>
+				<s:RichText text="Animation" styleName="contentText" width="{animationsList.width+13+animationsListHelpBtn.width}" />
+				<s:RichText text="Speed" styleName="contentText" width="{speedStep.width+23+speedStepHelpBtn.width+speedFpsDisplay.width}" />
+				<s:RichText text="Next" styleName="contentText" width="{animationsNextList.width+animationsNextListHelpBtn.width+13}" />
+			</s:HGroup>
+			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
+				<s:DropDownList id="animationsList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
+				<s:Button id="animationsListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:NumericStepper id="speedStep" change="handleAnimationsChange(event);" stepSize=".1" minimum="0" maximum="100" width="45" />
+				<s:RichText id="speedFpsDisplay" styleName="smallText" paddingTop="10" />
+				<s:Button id="speedStepHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
+				<s:DropDownList id="animationsNextList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
+				<s:Button id="animationsNextListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 			</s:HGroup>
 		</s:NavigatorContent>
 		
@@ -1246,22 +1254,26 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:VerticalLayout />
 			</s:layout>
 			<s:HGroup>
-				<s:RichText text="Frame count" styleName="contentText" />
-				<s:Spacer width="67" />
-				<s:RichText text="Export" styleName="contentText" />
+				<s:RichText id="framesLbl" text="Frames" styleName="contentText" width="{numFramesStep.width+numFramesHelp.width+7}" />
+				<s:RichText text="Export" styleName="contentText" width="{basePathTxt.x - framesLbl.width-10}" />
+				<s:RichText text="Base path" styleName="contentText" width="{basePathTxt.width+basePathHelpBtn.width}" />
+				<s:RichText text="Data type" styleName="contentText" />
 			</s:HGroup>
 			<s:HGroup width="100%" height="100%" verticalAlign="middle">
-				<s:Label text="Export " />
 				<s:NumericStepper id="numFramesStep" width="50" height="20" maximum="999" change="handleNumFramesStepChange()" />
-				<s:Label text="frames" />
 				<s:Button id="numFramesHelp" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
 				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
 				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
 				<s:CheckBox id="maintainPow2Chk" label="Trim" change="handleExportPow2Change();" />
 				<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:Label text="Data format " verticalAlign="middle" height="18" paddingTop="3" />
+				
+				<s:TextInput id="basePathTxt" width="75%" change="handleBasePathChange();" />
+				<s:Button id="basePathHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				
 				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
-				<s:TextInput id="jsonpCallbackName" includeInLayout="false" visible="false" width="85" change="handleExportFormatChange(event);" />
+				<s:TextInput id="jsonpCallbackName" includeInLayout="false" visible="false" width="25%" change="handleExportFormatChange(event);" />
 				<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 			</s:HGroup>
 		</s:NavigatorContent>
