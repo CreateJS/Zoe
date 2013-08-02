@@ -1196,7 +1196,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			
 			<s:HGroup id="boundsLabelView" gap="10" width="100%">
 				<s:RichText text="Image Bounds" styleName="contentText" />
-				<mx:Spacer width="311" />
+				<mx:Spacer width="316" />
 				<s:RichText text="Reuse Frames" width="{threshold.width+reuseFramesChk.width+thresholdLbl.width+thresholdHelpBtn.width+25}" styleName="contentText" />
 				<s:RichText text="fps" styleName="contentText" />
 			</s:HGroup>
@@ -1205,14 +1205,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:NumericStepper id="exportPadding" width="40" height="20" minimum="0" maximum="99" stepSize="1"  change="handleExportPaddingChange()" />
 				<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
-				<s:NumericStepper id="scaleValue" width="55" height="20" minimum="0.25" maximum="10" value="1" stepSize="0.25" change="handleScaleChange()" />
+				<s:RichText text="Scale " />
+				<s:NumericStepper id="scaleValue" width="50" height="20" minimum="0.25" maximum="10" value="1" stepSize="0.25" change="handleScaleChange()" />
 				<s:Button id="scaleHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
 				<s:CheckBox id="variableFrameDimensions" label="Variable Frame" change="handleExportFormatChange(event)"/>
 				<s:Button id="variableFrameDimensionsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:Button label="Calculate Bounds" styleName="simpleButton" enabled="{!variableFrameDimensions.selected}"  click="findBounds()" />
+				<s:Button label="Update Bounds" styleName="simpleButton" enabled="{!variableFrameDimensions.selected}"  click="findBounds()" />
 				
-				<mx:Spacer width="10" />
 				<s:CheckBox id="reuseFramesChk" label="" change="handleExportFormatChange(event)"/>
 				<s:HGroup paddingLeft="-5" paddingTop="5" width="100%">
 					<s:HSlider id="threshold" width="100%" dataTipFormatFunction="formatToleranceLbl" enabled="{reuseFramesChk.selected}" change="handleToleranceChange()" maximum="1" minimum="0.01" stepSize="0.01" />
