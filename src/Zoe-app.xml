@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<application xmlns="http://ns.adobe.com/air/application/3.6">
+<application xmlns="http://ns.adobe.com/air/application/3.8">
 	<id>Zoe</id>
 	<filename>Zoe</filename>
 	<name>Zoë</name>
-	<versionNumber>0.3.5</versionNumber>
+	<versionNumber>0.4.0</versionNumber>
 	
 	<initialWindow>
 		<content>[This value will be overwritten by Flash Builder in the output app.xml]</content>
