@@ -224,6 +224,12 @@ package com.gskinner.zoe.model {
 			invalidate();
 		}
 		
+		public function setOverPaint(value:Boolean):void {
+			selectedItem.overPaint = value;
+			invalidate();
+		}
+		
+		
 		public function setSelectedScale(scale:Number):void {
 			selectedItem.scale = scale;
 			invalidate();

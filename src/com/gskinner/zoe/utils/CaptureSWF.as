@@ -352,7 +352,7 @@ package com.gskinner.zoe.utils {
 			var rect:Rectangle = new Rectangle(frame.x, frame.y, frame.width, frame.height);
 
 			if (rect.width == 0) {
-				rect = new Rectangle(frame.x, frame.y, 1, 1); 
+				rect = new Rectangle(frame.x, frame.y, 1, 1);
 			}
 			
 			//Capture just one frame here, we piece it together at the end.
@@ -641,6 +641,12 @@ package com.gskinner.zoe.utils {
 			if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_SPRITE_SHEET) {
 				var exportSheet:BitmapData = new BitmapData(requestedWidth, requestedHeight, true, 0xffffff);
 				var currentBitmapData:Object = {bmpd:exportSheet, w:0, h:0};
+				var overPaint:Boolean = fileModel.selectedItem.overPaint;
+				
+				// When we over paint each cell, how many pixels should we use?
+				// For best results this number should be pow(n, 2);
+				var sf:uint = 2;
+				
 				exportBitmaps.push(currentBitmapData);
 				
 				var pointYOffset:Number = 0;
@@ -674,7 +680,18 @@ package com.gskinner.zoe.utils {
 					matrix = new Matrix();
 					matrix.translate(point.x, point.y);
 					
-					rect = new Rectangle(point.x, point.y, bmpd.width, bmpd.height);
+					if (overPaint) {
+						var tmpBmp:BitmapData = new BitmapData(bmpd.width+sf, bmpd.height+sf);
+						rect = new Rectangle(point.x, point.y, bmpd.width+sf, bmpd.height+sf);
+						
+						var tmpMatrix:Matrix = new Matrix();
+						tmpMatrix.scale(1+(sf/bmpd.width), 1+(sf/bmpd.height));
+						
+						tmpBmp.draw(bmpd, tmpMatrix);
+						bmpd = tmpBmp;
+					} else {
+						rect = new Rectangle(point.x, point.y, bmpd.width, bmpd.height);
+					}
 					
 					currentBitmapData.w = Math.max(currentBitmapData.w, point.x + rect.width);
 					currentBitmapData.h = Math.max(currentBitmapData.h, point.y + rect.height);
@@ -697,7 +714,11 @@ package com.gskinner.zoe.utils {
 						var newH:Number = findNextPower2(realHeight);
 						
 						var tmpBitmap:BitmapData = new BitmapData(newW, newH, true, 0xffffff);
-						tmpBitmap.copyPixels(bmpd,new Rectangle(0,0,realWidth,realHeight), new Point());
+						if (overPaint) {
+							tmpBitmap.copyPixels(bmpd,new Rectangle(0,0,realWidth,realHeight), new Point(-sf*.5, -sf*.5));
+						} else {
+							tmpBitmap.copyPixels(bmpd,new Rectangle(0,0,realWidth,realHeight), new Point());
+						}
 						
 						bmpd = tmpBitmap;
 						(exportBitmaps[i].bmpd as BitmapData).dispose();
@@ -788,11 +809,11 @@ package com.gskinner.zoe.utils {
 						var oy:Number;
 						
 						if (fileModel.selectedItem.variableFrameDimensions) {
-							ox = frameData.registrationPoint.x-captureRect.x-fileModel.selectedItem.exportPadding;
-							oy = frameData.registrationPoint.y-captureRect.y-fileModel.selectedItem.exportPadding;
+							ox = frameData.registrationPoint.x-captureRect.x-padding;
+							oy = frameData.registrationPoint.y-captureRect.y-padding;
 						} else {
-							ox = frameData.registrationPoint.x-origRect.x-fileModel.selectedItem.exportPadding;
-							oy = frameData.registrationPoint.y-origRect.y-fileModel.selectedItem.exportPadding;
+							ox = frameData.registrationPoint.x-origRect.x-padding;
+							oy = frameData.registrationPoint.y-origRect.y-padding;
 						}
 						
 						//Round the Reg Points
@@ -802,8 +823,8 @@ package com.gskinner.zoe.utils {
 						//Frame format: [x,y,w,h,index,regX,regY]
 						if (fileModel.selectedItem.imageExportType == ExportType.IMAGE_FRAME) {
 							frames.push([
-								0,
-								0,
+								padding,
+								padding,
 								rect.width,
 								rect.height,
 								frameData.actualIndex,
@@ -814,8 +835,8 @@ package com.gskinner.zoe.utils {
 							var frame:Array = [
 								point.x+padding,
 								point.y+padding,
-								rect.width,
-								rect.height,
+								rect.width-(padding*2),
+								rect.height-(padding*2),
 								frameData.sheetIndex,
 								ox,
 								oy,

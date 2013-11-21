@@ -27,7 +27,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 -->
 
-<!---
+<!--
 	Defines the main view for the application.
 -->
 <s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
@@ -157,11 +157,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 			}
 			
 			protected function getExportPaddingValue():Number {
-				var value:Number = exportPadding.value;
-				if (isNaN(value)) {
-					exportPadding.value = 1;
-				}
-				return exportPadding.value;
+				return exportPadding.selected?2:0;
 			}
 			
 			override public function set enabled(value:Boolean):void {
@@ -229,7 +225,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				addFileBtn.toolTip = "Browse for a swf file.  You can also drag and drop file(s) onto the application.";
 				exportBtn.toolTip = "Exports your animation to disk.";
 				deleteButton.toolTip = "Deletes the current item from the list, local files are not modified.";
-				exportPaddingHelpBtn.toolTip = "A dotted line will appear around the image to indicate the padding. It's applied to each frame during export.";
+				exportPaddingHelpBtn.toolTip = "A 2px padding will be put around each frame of the exported animation. Used to prevent antiliasing conflicts.";
+				overPaintHelpBtn.toolTip = "For use with padding. Scales each painted frame up by 1px, to prevent GPU drawing errors on edges.";
 				scaleHelpBtn.toolTip = "Scale the spritesheet for export."
 				thresholdHelpBtn.toolTip = "Adjusting the scaling magnitude or intensity in which frames are to be compared for export.";
 				variableFrameDimensionsHelpBtn.toolTip = "Performs rectangle packing optimizing sizing for sprites.";
@@ -443,7 +440,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				if (item == null) {
 					swfCapture.source = null;
-					exportPadding.value = 0;
+					exportPadding.selected = false;
+					overPaint.selected = false;
 					numFramesStep.value = 0;
 					threshold.value = 0;
 					sourcePathTxt.text = '';
@@ -459,7 +457,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					variableFrameDimensions.selected = false;
 				} else {
 					swfCapture.source = item.sourcePath;
-					exportPadding.value = item.exportPadding;
+					exportPadding.selected = item.exportPadding > 0;
 					threshold.value = isNaN(item.threshold) ? 0.5 : item.threshold;
 					
 					thresholdLbl.text = String(Math.round(threshold.value*100));
@@ -467,6 +465,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					variableFrameDimensions.selected = item.variableFrameDimensions;
 					
 					if (getExportPaddingValue() > 1) { swfCapture.padding = getExportPaddingValue(); }
+					overPaint.selected = item.overPaint;
 					swfCapture.scale = item.scale;
 					
 					sourcePathTxt.text = unescapeMultiByte(item.sourcePath);
@@ -989,6 +988,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 				var bounds:Rectangle = fileModel.swfCapture.captureBounds;
 				createBoundPreview(bounds);
 				fileModel.setSelectedBounds(bounds.x, bounds.y, bounds.width, bounds.height, getExportPaddingValue());
+				if (!exportPadding.selected) {
+					overPaint.selected = false;
+					handleOverPaintChange();
+				}
+			}
+			
+			protected function handleOverPaintChange():void {
+				fileModel.setOverPaint(overPaint.selected);
 			}
 			
 			protected function handleScaleChange():void {
@@ -1167,7 +1174,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 	
 	<controls:Menu id="mainMenu" tabChildren="false" tabEnabled="false" />
 	
-	<mx:ViewStack id="tabViews" creationPolicy="all" height="50" width="100%" backgroundColor="0xffffff">
+	<mx:ViewStack id="tabViews" creationPolicy="all" height="60" width="100%" backgroundColor="0xffffff">
 		
 		<!-- Basic View -->
 		<s:NavigatorContent width="100%" height="100%" enabled="{fileList.selectedIndex != -1}">
@@ -1179,7 +1186,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:RichText text="Source" styleName="contentText" width="{browseForDestinationBtn.width + sourcePathTxt.width+5}" />
 				<s:RichText text="Output" styleName="contentText" />
 			</s:HGroup>
-			<s:HGroup width="100%" height="100%" verticalAlign="middle">
+			<s:HGroup width="100%" height="100%" verticalAlign="top">
 				<s:TextInput id="sourceNameTxt" width="33%" change="handleSourceNameChange()" />
 				<s:Button id="browseForFolderBtn" styleName="folderButton" click="handleUpdateSourceClick();" />
 				<s:TextInput id="sourcePathTxt" width="33%" editable="false" />
@@ -1195,30 +1202,50 @@ OTHER DEALINGS IN THE SOFTWARE.
 			</s:layout>
 			
 			<s:HGroup id="boundsLabelView" gap="10" width="100%">
-				<s:RichText text="Image Bounds" styleName="contentText" />
-				<mx:Spacer width="316" />
-				<s:RichText text="Reuse Frames" width="{threshold.width+reuseFramesChk.width+thresholdLbl.width+thresholdHelpBtn.width+25}" styleName="contentText" />
+				<s:RichText text="Bounds" styleName="contentText" />
+				<s:Spacer width="165" />
+				<s:RichText text="Scale" styleName="contentText" />
+				<mx:Spacer width="26" />
+				<s:RichText text="Reuse Frames" width="{threshold.width-this.x+1}" styleName="contentText" />
 				<s:RichText text="fps" styleName="contentText" />
 			</s:HGroup>
 			
-			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
-				<s:NumericStepper id="exportPadding" width="40" height="20" minimum="0" maximum="99" stepSize="1"  change="handleExportPaddingChange()" />
-				<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+			<s:HGroup width="100%" height="100%" verticalAlign="top" gap="10">
+				<s:VGroup>
+					<s:HGroup>
+						<s:CheckBox id="exportPadding" label="Padding" change="handleExportPaddingChange();" />
+						<s:Button id="exportPaddingHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+					</s:HGroup>
+					
+					<s:HGroup paddingLeft="5">
+						<s:CheckBox id="overPaint" enabled="{exportPadding.selected}" label="Over Paint" change="handleOverPaintChange();" />
+						<s:Button id="overPaintHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+					</s:HGroup>
+				</s:VGroup>
 				
-				<s:RichText text="Scale " />
+				<s:VGroup>
+					<s:HGroup>
+						<s:CheckBox id="variableFrameDimensions" label="Variable Frame" change="handleExportFormatChange(event)"/>
+						<s:Button id="variableFrameDimensionsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+					</s:HGroup>
+					<s:Button label="Update Bounds" styleName="simpleButton" enabled="{!variableFrameDimensions.selected}"  click="findBounds()" />
+				</s:VGroup>
+				
 				<s:NumericStepper id="scaleValue" width="50" height="20" minimum="0.25" maximum="10" value="1" stepSize="0.25" change="handleScaleChange()" />
 				<s:Button id="scaleHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
-				<s:CheckBox id="variableFrameDimensions" label="Variable Frame" change="handleExportFormatChange(event)"/>
-				<s:Button id="variableFrameDimensionsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				<s:Button label="Update Bounds" styleName="simpleButton" enabled="{!variableFrameDimensions.selected}"  click="findBounds()" />
-				
-				<s:CheckBox id="reuseFramesChk" label="" change="handleExportFormatChange(event)"/>
-				<s:HGroup paddingLeft="-5" paddingTop="5" width="100%">
-					<s:HSlider id="threshold" width="100%" dataTipFormatFunction="formatToleranceLbl" enabled="{reuseFramesChk.selected}" change="handleToleranceChange()" maximum="1" minimum="0.01" stepSize="0.01" />
-				</s:HGroup>
-				<s:TextInput id="thresholdLbl" restrict="[0-9]" width="35" enabled="{threshold.enabled}" enter="handleToleranceEnter()" />
-				<s:Button id="thresholdHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:VGroup width="100%">
+					<s:HGroup width="100%">
+						<s:CheckBox id="reuseFramesChk" label="Reuse" change="handleExportFormatChange(event)"/>
+						<s:Button id="thresholdHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+						<s:Spacer width="100%" />
+						<s:TextInput id="thresholdLbl" restrict="[0-9]" width="35" enabled="{threshold.enabled}" enter="handleToleranceEnter()" />
+					</s:HGroup>
+					
+					<s:HGroup paddingTop="5" width="100%">
+						<s:HSlider id="threshold" width="100%" dataTipFormatFunction="formatToleranceLbl" enabled="{reuseFramesChk.selected}" change="handleToleranceChange()" maximum="1" minimum="0.01" stepSize="0.01" />
+					</s:HGroup>
+				</s:VGroup>
 				
 				<s:NumericStepper id="frameRateStep" minimum="1" maximum="60" width="45" value="24" change="handleFrameRateChange()" />
 				<s:Button id="fpsHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
@@ -1232,15 +1259,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 			</s:layout>
 			<s:HGroup>
 				<s:RichText text="Animation" styleName="contentText" width="{animationsList.width+13+animationsListHelpBtn.width}" />
-				<s:RichText text="Speed" styleName="contentText" width="{speedStep.width+23+speedStepHelpBtn.width+speedFpsDisplay.width}" />
+				<s:RichText text="Speed" styleName="contentText" width="{speedStep.width+23+speedStepHelpBtn.width}" />
 				<s:RichText text="Next" styleName="contentText" width="{animationsNextList.width+animationsNextListHelpBtn.width+13}" />
 			</s:HGroup>
-			<s:HGroup width="100%" height="100%" verticalAlign="middle" gap="10">
+			<s:HGroup width="100%" height="100%" verticalAlign="top" gap="10">
 				<s:DropDownList id="animationsList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
 				<s:Button id="animationsListHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
-				<s:NumericStepper id="speedStep" change="handleAnimationsChange(event);" stepSize=".1" minimum="0" maximum="100" width="45" />
-				<s:RichText id="speedFpsDisplay" styleName="smallText" paddingTop="10" />
+				<s:VGroup gap="0">
+					<s:NumericStepper id="speedStep" change="handleAnimationsChange(event);" stepSize=".1" minimum="0" maximum="100" width="45" />
+					<s:RichText id="speedFpsDisplay" styleName="smallText" paddingTop="10" />
+				</s:VGroup>
 				<s:Button id="speedStepHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
 				<s:DropDownList id="animationsNextList" width="50%" labelField="name" change="handleAnimationsChange(event);" />
@@ -1259,22 +1288,34 @@ OTHER DEALINGS IN THE SOFTWARE.
 				<s:RichText text="Base path" styleName="contentText" width="{basePathTxt.width+basePathHelpBtn.width}" />
 				<s:RichText text="Data type" styleName="contentText" />
 			</s:HGroup>
-			<s:HGroup width="100%" height="100%" verticalAlign="middle">
+			<s:HGroup width="100%" height="100%" verticalAlign="top">
 				<s:NumericStepper id="numFramesStep" width="50" height="20" maximum="999" change="handleNumFramesStepChange()" />
 				<s:Button id="numFramesHelp" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
-				<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
-				<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
-				
-				<s:CheckBox id="maintainPow2Chk" label="Trim" change="handleExportPow2Change();" />
-				<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:VGroup>
+					<s:HGroup>
+						<s:DropDownList id="imageExportList" height="18" width="180" change="changeImageExportType()" />
+						<s:Button id="exportSizesHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+					</s:HGroup>
+					
+					<s:HGroup>
+						<s:CheckBox id="maintainPow2Chk" label="Trim" change="handleExportPow2Change();" />
+						<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+					</s:HGroup>
+				</s:VGroup>
 				
 				<s:TextInput id="basePathTxt" width="75%" change="handleBasePathChange();" />
 				<s:Button id="basePathHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 				
-				<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
-				<s:TextInput id="jsonpCallbackName" includeInLayout="false" visible="false" width="25%" change="handleExportFormatChange(event);" />
-				<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+				<s:VGroup>
+					<s:HGroup>
+					<s:DropDownList id="dataExportList" width="100" change="handleExportFormatChange(event)" />
+						<s:Button id="exportJsonHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+					</s:HGroup>
+					
+						<s:TextInput id="jsonpCallbackName" includeInLayout="false" visible="false" width="100%" change="handleExportFormatChange(event);" />
+					
+				</s:VGroup>
 			</s:HGroup>
 		</s:NavigatorContent>
 		

@@ -74,6 +74,11 @@ package com.gskinner.zoe.data {
 		public var exportPadding:Number;
 		
 		/**
+		 * 
+		 */
+		public var overPaint:Boolean;
+		
+		/**
 		 *  The scale of the clip.
 		 */
 		public var scale:Number;
@@ -156,7 +161,8 @@ package com.gskinner.zoe.data {
 			backgroundColor = 0xcccccc;
 			showGrid = true;
 			maintainPow2 = true;
-			exportPadding = 2;
+			exportPadding = 0;
+			overPaint = false;
 			frameCount = 0;
 			scale = 1;
 			_animations = {};
@@ -220,6 +226,7 @@ package com.gskinner.zoe.data {
 				showGrid:showGrid,
 				frameBounds:{x:frameBounds.x, y:frameBounds.y, width:frameBounds.width, height:frameBounds.height},
 				exportPadding:exportPadding,
+				overPaint:overPaint,
 				scale:scale,
 				destinationPath:destinationPath,
 				sourcePath:sourcePath,
@@ -253,7 +260,16 @@ package com.gskinner.zoe.data {
 			backgroundColor = value.backgroundColor;
 			showGrid = value.showGrid;
 			frameBounds = new Rectangle(value.frameBounds.x||0, value.frameBounds.y||0, value.frameBounds.width||0, value.frameBounds.height||0);
+			
 			exportPadding = value.exportPadding;
+			
+			// Fix old (Pre 0.5.0 padding values)
+			if (!isNaN(exportPadding) && exportPadding > 2) {
+				exportPadding = 2;
+			}
+			
+			overPaint = value.overPaint || false;
+			
 			destinationPath = value.destinationPath;
 			sourcePath = value.sourcePath;
 			name = value.name;
