@@ -340,9 +340,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 				animationsList.selectedIndex = 1;
 				
 				// Populate the defaults
-				var nextAnim:String = fileModel.selectedItem.getNextAnimationName(animationsList.selectedItem.name);
+				var nextAnim:String = animationsList.selectedItem==null?'':fileModel.selectedItem.getNextAnimationName(animationsList.selectedItem.name);
 				animationsNextList.selectedIndex = getIndexOfName(animationsDataProvider, nextAnim);
-				speedStep.value = fileModel.selectedItem.getAnimationSpeed(animationsList.selectedItem.name);
+				speedStep.value = animationsList.selectedItem==null?0:fileModel.selectedItem.getAnimationSpeed(animationsList.selectedItem.name);
 				
 				basePathTxt.text = fileModel.selectedItem.basePath;
 				
