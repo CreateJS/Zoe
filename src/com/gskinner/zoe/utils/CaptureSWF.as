@@ -681,14 +681,22 @@ package com.gskinner.zoe.utils {
 					matrix.translate(point.x, point.y);
 					
 					if (overPaint) {
-						var tmpBmp:BitmapData = new BitmapData(bmpd.width+sf, bmpd.height+sf);
+						var scaledBitmap:BitmapData = new BitmapData(bmpd.width+sf, bmpd.height+sf, false);
 						rect = new Rectangle(point.x, point.y, bmpd.width+sf, bmpd.height+sf);
 						
-						var tmpMatrix:Matrix = new Matrix();
-						tmpMatrix.scale(1+(sf/bmpd.width), 1+(sf/bmpd.height));
+						var scaleMatrix:Matrix = new Matrix();
+						scaleMatrix.scale(1+(sf/bmpd.width), 1+(sf/bmpd.height));
 						
-						tmpBmp.draw(bmpd, tmpMatrix);
-						bmpd = tmpBmp;
+						var offsetMatrix:Matrix = new Matrix();
+						offsetMatrix.translate(1, 1);
+						
+						//Draw our scaled bitmap first.
+						scaledBitmap.draw(bmpd, scaleMatrix);
+						
+						// Draw the unscaled bitmap overtop, offet by 1px
+						scaledBitmap.draw(bmpd, offsetMatrix);
+						
+						bmpd = scaledBitmap;
 					} else {
 						rect = new Rectangle(point.x, point.y, bmpd.width, bmpd.height);
 					}
