@@ -161,6 +161,12 @@ package com.gskinner.zoe.model {
 			invalidate();
 		}
 		
+		public function setMaintainMinSize(value:Boolean):void {
+			selectedItem.maintainMinSize = value;
+			
+			invalidate();
+		}
+		
 		/**
 		 * Sets the threshold level for comparsion.
 		 * 
