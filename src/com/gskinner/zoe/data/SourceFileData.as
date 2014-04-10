@@ -120,6 +120,11 @@ package com.gskinner.zoe.data {
 		public var maintainPow2:Boolean;
 		
 		/**
+		 * Flag to always export image with pow(2,n) sizes.
+		 */
+		public var maintainMinSize:Boolean;
+		
+		/**
 		 * What fps our Spritesheet should be exported with.
 		 */
 		public var fps:Number = 24;
@@ -161,6 +166,7 @@ package com.gskinner.zoe.data {
 			backgroundColor = 0xcccccc;
 			showGrid = true;
 			maintainPow2 = true;
+			maintainMinSize = true;
 			exportPadding = 0;
 			overPaint = false;
 			frameCount = 0;
@@ -243,6 +249,7 @@ package com.gskinner.zoe.data {
 				variableFrameDimensions:variableFrameDimensions,
 				frameCount:frameCount,
 				maintainPow2:maintainPow2,
+				maintainMinSize:maintainMinSize,
 				basePath:basePath,
 				isDirty:isDirty
 			}
@@ -282,6 +289,7 @@ package com.gskinner.zoe.data {
 			imageExportType = value.imageExportType || ExportType.IMAGE_SPRITE_SHEET;
 			scale = value.scale || 1;
 			maintainPow2 = value.maintainPow2 || true;
+			maintainMinSize = value.maintainMinSize || true;
 			jsonpCallback = value.jsonpCallback || 'callback';
 			fps = isNaN(value.fps)?24:value.fps;
 			_animations = value.animations || {};

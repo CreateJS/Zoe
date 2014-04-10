@@ -218,6 +218,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 				
 				//Add add some help tooltips
 				maintainPowHelpBtn.toolTip = "Will trim spritesheet images to the smallest power of 2 dimensions possible based on the content.";
+				maintainPowHelpBtn1.toolTip = "Will make spritesheet images to the smallest based on the content.";
 				exportSizesHelpBtn.toolTip = "SpriteSheet: Exports one or more images (based on available size) with multiple frames on each image.\nFrames: Exports individual PNG's for each frame.";
 				exportJsonHelpBtn.toolTip = "Exports a JSON file that defines your animations, for use with EaselJS.";
 				numFramesHelp.toolTip = "Total number of frames to export, starting from 0, setting to 0 will export everything.";
@@ -478,6 +479,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 					numFramesStep.value = item.frameCount || 0;
 					
 					maintainPow2Chk.selected = item.maintainPow2;
+					maintainMinSizeChk.selected = item.maintainMinSize;
 					
 					frameRateStep.value = item.fps;
 					
@@ -853,6 +855,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 */
 			protected function handleExportPow2Change():void {
 				fileModel.setMaintainPow2(maintainPow2Chk.selected);
+			}
+			
+			protected function handleExportMinSizeChange():void 
+			{
+				fileModel.setMaintainMinSize(maintainMinSizeChk.selected);
 			}
 			
 			protected function changeDataExportType():void {
@@ -1301,6 +1308,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 					<s:HGroup>
 						<s:CheckBox id="maintainPow2Chk" label="Trim" change="handleExportPow2Change();" />
 						<s:Button id="maintainPowHelpBtn" styleName="helpButton" useHandCursor="false" buttonMode="false" />
+						<s:CheckBox id="maintainMinSizeChk" label="Min Size" change="handleExportMinSizeChange();" />
+						<s:Button id="maintainPowHelpBtn1" styleName="helpButton" useHandCursor="false" buttonMode="false" />
 					</s:HGroup>
 				</s:VGroup>
 				

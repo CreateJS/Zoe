@@ -488,7 +488,13 @@ package com.gskinner.zoe.utils {
 			_frameBounds.inflate(fileModel.selectedItem.exportPadding, fileModel.selectedItem.exportPadding);
 			var scale:Number = fileModel.selectedItem.scale;
 			
-			var rect:Rectangle = new Rectangle(0, 0, _frameCaptureWidth, _frameCaptureHeight);
+			var maintainMinSize:Boolean = fileModel.selectedItem.maintainMinSize;
+			var rect:Rectangle = null;
+			if (maintainMinSize) {
+				rect = new Rectangle(0, 0, _frameBounds.width, _frameBounds.height);
+			}else {
+				rect = new Rectangle(0, 0, _frameCaptureWidth, _frameCaptureHeight);
+			}
 			
 			//Capture just one frame here, we peice it together at the end.
 			var mtx:Matrix = new Matrix();
@@ -544,6 +550,7 @@ package com.gskinner.zoe.utils {
 			var requestedWidth:Number = fileModel.selectedItem.bitmapWidth;
 			var requestedHeight:Number = fileModel.selectedItem.bitmapHeight;
 			var maintainPow2:Boolean = fileModel.selectedItem.maintainPow2;
+			var maintainMinSize:Boolean = fileModel.selectedItem.maintainMinSize;
 			
 			exportedImageNames = [];
 			
@@ -718,8 +725,13 @@ package com.gskinner.zoe.utils {
 					//Size the bitmap to a pow(2).
 					//Doesn't work if we don't export all the frames (with correct positions);
 					if (maintainPow2) {
-						var newW:Number = findNextPower2(realWidth);
-						var newH:Number = findNextPower2(realHeight);
+						if (maintainMinSize) {
+							var newW:Number = realWidth;
+							var newH:Number = realHeight;
+						}else {
+							var newW:Number = findNextPower2(realWidth);
+							var newH:Number = findNextPower2(realHeight);
+						}
 						
 						var tmpBitmap:BitmapData = new BitmapData(newW, newH, true, 0xffffff);
 						if (overPaint) {
