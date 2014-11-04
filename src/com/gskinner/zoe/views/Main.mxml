@@ -764,6 +764,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 			 * 
 			 */
 			protected function handleFrameRateChange():void {
+				if (fileModel.selectedItem == null) { return; }
+				
 				if (!currentAnimation) {
 					stage.frameRate = frameRateStep.value;
 				} else {
