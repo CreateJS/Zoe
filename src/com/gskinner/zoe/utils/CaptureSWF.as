@@ -270,6 +270,11 @@ package com.gskinner.zoe.utils {
 			//Reload the swf
 			_startSwf = swf;
 			
+			if (swf) {
+				swf.removeEventListener(Event.INIT, handleSwfInit);
+				clip.removeEventListener(Event.EXIT_FRAME, handleCaptureFrames);
+			}
+			
 			swf = new SWFLoader();
 			swf.setActualSize(MAX_WIDTH, MAX_HEIGHT);
 			swf.addEventListener(Event.INIT, handleSwfInit, false, 0, true);
