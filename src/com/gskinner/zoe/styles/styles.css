@@ -151,24 +151,10 @@ s|NumericStepper {
 	fontSize:11;
 }
 
-s|TextArea {
-	borderVisible: false;
-	contentBackgroundColor: "0xDDDDDD";
-	contentBackgroundAlpha: .6;
-}
-
 s|TextInput {
 	borderVisible: false;
 	contentBackgroundColor: "0xDDDDDD";
 	contentBackgroundAlpha: .6;
-}
-
-mx|ToolTip {
-	backgroundAlpha: 1.0;
-	backgroundColor: #b4d1f1;
-	color: black;
-	cornerRadius: 8;
-	fontSize: 12;
 }
 
 s|TextArea s|VScrollBar {

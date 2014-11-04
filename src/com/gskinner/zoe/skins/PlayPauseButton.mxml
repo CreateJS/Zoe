@@ -40,9 +40,11 @@ OTHER DEALINGS IN THE SOFTWARE.
     
     <fx:Script>
 		[Embed (source="../../../../assets/play.png")]
+		[Bindable]
 		protected var playIcon:Class;
 		
 		[Embed (source="../../../../assets/play-pause.png")]
+		[Bindable]
 		protected var pauseIcon:Class;
 		
     </fx:Script>
