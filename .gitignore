@@ -1,7 +1,14 @@
-bin-debug
+bin-*/
 .settings
 .actionScriptProperties
 .flexProperties
 .project
-Zoe.air
 Spikes
+npm-debug.log
+*/.idea/
+*/node_modules/*
+*.dmg
+*.air
+*.exe
+*.swf
+*.p12

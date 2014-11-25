@@ -14,7 +14,19 @@ Zoë and [Easel](http://www.createjs.com/#!/EaselJS) support custom registration
 
 #### Building
 
-Zoë is typically built using Flash Builder 4.5, and has been compiled against the Adobe Flex SDK 4.6.0 and Adobe AIR 3.x.  To build a copy your self, or to just test changes locally.  Create a new Flex AIR Project, and point to the Zoe root folder, and test.
+**Command line (Recommended)**
+
+* Install the latest Flex SDK from Apache (http://flex.apache.org/)
+** The latest version is built against Apace Flex 4.13.0
+* Make sure java is available on your PATH
+* Rename FlexSdkPath.conf.sample to FlexSdkPath.conf and edit the FLEX_SDK variable to point to your Flex SDK
+* For OSX run build.sh and for Windows run build.bat
+* Note that we don't distribute the default application *.p12 key
+** To create your own key for testing visit: http://help.adobe.com/en_US/air/build/WS901d38e593cd1bac1e63e3d128fc240122-7ffc.html
+
+**FlexBuilder**
+
+* You can also build using Flex Builder by checking out the repo a creating a new Flex AIR/MXML project, and use this repo as your project root.
 
 #### Support
 

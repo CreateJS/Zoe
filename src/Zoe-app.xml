@@ -6,7 +6,7 @@
 	<versionNumber>0.5.1</versionNumber>
 	
 	<initialWindow>
-		<content>[This value will be overwritten by Flash Builder in the output app.xml]</content>
+		<content>Zoe.swf</content>
 		<minSize>750 430</minSize>
 		<autoOrients>false</autoOrients>
 	    <fullScreen>false</fullScreen>
